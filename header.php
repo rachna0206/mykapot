@@ -16,7 +16,7 @@ if(!isset($_SESSION["userlogin"]) )
 
 
 $adminmenu=array("customer_reg.php","collection_time.php","delivery_settings.php","coupon.php","state.php","city.php","zone.php","area.php","post.php","mail_type.php","mail_type_tariff.php","deliveryboy_reg.php","coupon_counter.php");
-$reportmenu=array("stu_report.php");
+$reportmenu=array("customer_report.php");
 ?>
 
 <!DOCTYPE html>
@@ -341,25 +341,13 @@ $reportmenu=array("stu_report.php");
               </a>
               <ul class="menu-sub">
                 
-                <?php if(isset($menu["student_report"])=="student_report"){ ?>
-                <li class="menu-item <?php echo basename($_SERVER["PHP_SELF"])=="stu_report.php"?"active":"" ?>">
-                  <a href="stu_report.php" class="menu-link">
-                  <div data-i18n="course">Student Report</div>
+                
+                <li class="menu-item <?php echo basename($_SERVER["PHP_SELF"])=="customer_report.php"?"active":"" ?>">
+                  <a href="customer_report.php" class="menu-link">
+                  <div data-i18n="course">Customer Report</div>
                   </a>
                 </li>
-                <?php } if(isset($menu["faculty_report"])=="faculty_report"){ ?>
-                <li class="menu-item <?php echo basename($_SERVER["PHP_SELF"])=="faculty_report.php"?"active":"" ?>">
-                  <a href="faculty_report.php" class="menu-link">
-                  <div data-i18n="course">Staff Report</div>
-                  </a>
-                </li>
-                <?php } if(isset($menu["attendance_report"])=="attendance_report"){ ?>
-                <li class="menu-item <?php echo basename($_SERVER["PHP_SELF"])=="attendance_report_detail.php"?"active":"" ?>">
-                  <a href="attendance_report_detail.php" class="menu-link">
-                  <div data-i18n="course">Attendance Report</div>
-                  </a>
-                </li>
-                <?php } ?>
+                
 
               </ul>
             </li>
