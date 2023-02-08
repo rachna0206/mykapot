@@ -1,33 +1,58 @@
 <?php
 include("header.php");
 error_reporting(E_ALL);
+
 $stmt_city = $obj->con1->prepare("select * from city");
 $stmt_city->execute();
 $res_city = $stmt_city->get_result();
 $stmt_city->close();
 
+$stmt_zone = $obj->con1->prepare("select * from zone");
+$stmt_zone->execute();
+$res_zone = $stmt_zone->get_result();
+$stmt_zone->close();
+
 // insert data
 if(isset($_REQUEST['btnsubmit']))
 {
-  $name = $_REQUEST['name'];
-  $email = $_REQUEST['email'];
-  $pass = $_REQUEST['password'];
-  $contact = $_REQUEST['contact'];
-  $address = $_REQUEST['address'];
-  $pincode = $_REQUEST['pincode'];
+  echo "<br/>".$name = $_REQUEST['name'];
+  echo "<br/>".$email = $_REQUEST['email'];
+  echo "<br/>".$pass = $_REQUEST['password'];
+  echo "<br/>".$contact = $_REQUEST['contact'];
+  echo "<br/>".$address = $_REQUEST['address'];
+  echo "<br/>".$pincode = $_REQUEST['pincode'];
+  echo "<br/>".$city = $_REQUEST['city'];
+  echo "<br/>".$zone_id = $_REQUEST['zone'];
+  echo "<br/>".$id_type=$_REQUEST['id_type'];
+  echo "<br/>".$id_proof = $_FILES['id_proof']['name'];
+  echo "<br/>".$id_proof_path = $_FILES['id_proof']['tmp_name'];
+  echo "<br/>".$status = $_REQUEST['status'];
+  echo "<br/>".$action='added';
 
+  //rename file for id proof
+  if ($_FILES["id_proof"]["name"] != "")
+    {
+      if(file_exists("deliveryboy_id/" . $id_proof)) {
+          $i = 0;
+          $PicFileName = $_FILES["id_proof"]["name"];
+          $Arr1 = explode('.', $PicFileName);
 
-  $city = $_REQUEST['city'];
-  $id_type=$_REQUEST['id_type'];
-  $id_proof="";
-  $status = $_REQUEST['status'];
-  $action='added';
-  $zone_id="1";
+          $PicFileName = $Arr1[0] . $i . "." . $Arr1[1];
+          while (file_exists("deliveryboy_id/" . $PicFileName)) {
+              $i++;
+              $PicFileName = $Arr1[0] . $i . "." . $Arr1[1];
+          }
+     } 
+     else {
+          $PicFileName = $_FILES["id_proof"]["name"];
+      }
+    }
+
   try
   {
     
-	$stmt = $obj->con1->prepare("INSERT INTO `delivery_boy`( `name`, `email`, `password`, `contact`, `addess`, `city`, `pincode`, `id_proof_type`, `id_proof`,`zone_id`, `status`, `action`) values (?,?,?,?,?,?,?,?,?,?,?,?)");
-	$stmt->bind_param("sssssisssiss",$name,$email,$pass,$contact,$address,$city,$pincode,$id_type,$id_proof,$zone_id,$status,$action);
+	$stmt = $obj->con1->prepare("INSERT INTO `delivery_boy`( `name`, `email`, `password`, `contact`, `address`, `city`, `pincode`, `id_proof_type`, `id_proof`,`zone_id`, `status`, `action`) values (?,?,?,?,?,?,?,?,?,?,?,?)");
+	$stmt->bind_param("sssssisssiss",$name,$email,$pass,$contact,$address,$city,$pincode,$id_type,$PicFileName,$zone_id,$status,$action);
 	$Resp=$stmt->execute();
     if(!$Resp)
     {
@@ -42,14 +67,16 @@ if(isset($_REQUEST['btnsubmit']))
 
   if($Resp)
   {
+    move_uploaded_file($id_proof_path,"deliveryboy_id/".$PicFileName);
+
 	  setcookie("msg", "data",time()+3600,"/");
-      header("location:deliveryboy_reg.php");
+    header("location:deliveryboy_reg.php");
   }
   else
   {
 	  setcookie("msg", "fail",time()+3600,"/");
-      header("location:deliveryboy_reg.php");
-  }
+    header("location:deliveryboy_reg.php");
+  } 
 }
 
 if(isset($_REQUEST['btnupdate']))
@@ -61,18 +88,45 @@ if(isset($_REQUEST['btnupdate']))
   $address = $_REQUEST['address'];
   $pincode = $_REQUEST['pincode'];
   $city = $_REQUEST['city'];
+  $zone_id = $_REQUEST['zone'];
   $id_type=$_REQUEST['id_type'];
-  $id_proof="";
+  $id_proof = $_FILES['id_proof']['name'];
+  $id_proof_path = $_FILES['id_proof']['tmp_name'];
+  $rpp= $_REQUEST['hid_proof'];
   $status = $_REQUEST['status'];
-  
-  $zone_id="1";
   $id=$_REQUEST['ttId'];
   $action='updated';
+
+  if($pp!=""){
+    unlink("deliveryboy_id/".$rpp);  
+    //rename file for id proof
+    if ($_FILES["id_proof"]["name"] != "")
+    {
+      if(file_exists("deliveryboy_id/" . $id_proof)) {
+        $i = 0;
+        $PicFileName = $_FILES["id_proof"]["name"];
+        $Arr1 = explode('.', $PicFileName);
+
+        $PicFileName = $Arr1[0] . $i . "." . $Arr1[1];
+        while (file_exists("deliveryboy_id/" . $PicFileName)) {
+          $i++;
+          $PicFileName = $Arr1[0] . $i . "." . $Arr1[1];
+        }
+      } 
+      else {
+        $PicFileName = $_FILES["id_proof"]["name"];
+      }
+    }
+    move_uploaded_file($id_proof_path,"deliveryboy_id/".$PicFileName);
+  }
+  else{
+    $PicFileName=$rpp;
+  }
+
   try
-  {
-    
+  {  
     $stmt = $obj->con1->prepare("update delivery_boy set  name=?,`email`=?,`contact`=?,`address`=?,`city`=?,`pincode`=?,`id_proof_type`=?,`id_proof`=?,`zone_id`=?,`status`=?,`action`=? where db_id=?");
-	$stmt->bind_param("ssssisssissi", $name,$email,$contact,$address,$city,$pincode,$id_type,$id_proof,$zone_id,$status,$action,$id);
+	$stmt->bind_param("ssssisssissi", $name,$email,$contact,$address,$city,$pincode,$id_type,$PicFileName,$zone_id,$status,$action,$id);
 	$Resp=$stmt->execute();
     if(!$Resp)
     {
@@ -100,9 +154,11 @@ if(isset($_REQUEST['btnupdate']))
 // delete data
 if(isset($_REQUEST["flg"]) && $_REQUEST["flg"]=="del")
 {
+  $id_proof = $_REQUEST["id_proof"];
+
   try
   {
-    $stmt_del = $obj->con1->prepare("delete from  delivery_boy  where db_id='".$_REQUEST["n_id"]."'");
+    $stmt_del = $obj->con1->prepare("delete from delivery_boy  where db_id='".$_REQUEST["n_id"]."'");
   	$Resp=$stmt_del->execute();
     if(!$Resp)
     {
@@ -117,12 +173,15 @@ if(isset($_REQUEST["flg"]) && $_REQUEST["flg"]=="del")
 
   if($Resp)
   {
-	setcookie("msg", "data_del",time()+3600,"/");
+    if(file_exists("deliveryboy_id/".$id_proof)){
+      unlink("deliveryboy_id/".$id_proof);
+    }
+  	setcookie("msg", "data_del",time()+3600,"/");
     header("location:deliveryboy_reg.php");
   }
   else
   {
-	setcookie("msg", "fail",time()+3600,"/");
+	 setcookie("msg", "fail",time()+3600,"/");
     header("location:deliveryboy_reg.php");
   }
 }
@@ -198,7 +257,6 @@ if(isset($_COOKIE["msg"]) )
   }
 ?>
 
-
               <!-- Basic Layout -->
               <div class="row">
                 <div class="col-xl">
@@ -208,7 +266,7 @@ if(isset($_COOKIE["msg"]) )
                       
                     </div>
                     <div class="card-body">
-                      <form method="post" >
+                      <form method="post" enctype="multipart/form-data">
                         <input type="hidden" name="ttId" id="ttId" />
                         <div class="row">
                           <div class="col mb-3">
@@ -242,7 +300,6 @@ if(isset($_COOKIE["msg"]) )
                         <div class="row">
                           <div class="col mb-3">
                             <label for="nameWithTitle" class="form-label">City</label>
-                            
                             <select class="form-control" name="city" id="city">
                               <option value="">Select City</option>
                               <?php 
@@ -250,15 +307,32 @@ if(isset($_COOKIE["msg"]) )
                               {
                                 ?>
                                 <option value="<?php echo $city["city_id"]?>"><?php echo $city["city_name"]?></option>
-                                <?php
+                              <?php
                               }
                               ?>
-                              
                             </select>
                           </div>
                           <div class="col mb-3">
+                            <label for="nameWithTitle" class="form-label">Zone</label>
+                            <select class="form-control" name="zone" id="zone">
+                              <option value="">Select Zone</option>
+                              <?php 
+                              while($zone=mysqli_fetch_array($res_zone))
+                              {
+                                ?>
+                                <option value="<?php echo $zone["zid"]?>"><?php echo $zone["zone_name"]?></option>
+                              <?php
+                              }
+                              ?>
+                            </select>
+                          </div>
+                        </div>
+                        <div class="row">
+                          <div class="col mb-3">
                             <label for="nameWithTitle" class="form-label">Pincode</label>
                             <input type="text" id="pincode" name="pincode" class="form-control"  />
+                          </div>
+                          <div class="col mb-3">
                           </div>
                         </div>
                         <div class="row">
@@ -275,7 +349,10 @@ if(isset($_COOKIE["msg"]) )
                           </div>
                           <div class="col mb-3">
                             <label for="nameWithTitle" class="form-label">Id Proof</label>
-                            <input type="file" id="id_proof" name="id_proof" class="form-control"  />
+                            <input type="file" class="form-control" onchange="readURL(this)" name="id_proof" id="id_proof" required />
+                            <img src="" name="PreviewImage" id="PreviewImage" width="100" height="100" style="display:none;">
+                          <div id="imgdiv" style="color:red"></div>
+                          <input type="hidden" name="hid_proof" id="hid_proof" />
                           </div>
                         </div>
                         <div class="row">
@@ -354,12 +431,10 @@ if(isset($_COOKIE["msg"]) )
                     
                         <td>
                         
-                        	<a href="javascript:editdata('<?php echo $Delivery["db_id"]?>','<?php echo $Delivery["name"]?>','<?php echo $Delivery["email"]?>','<?php echo $Delivery["contact"]?>','<?php echo base64_encode($Delivery["address"])?>','<?php echo $Delivery["city"]?>','<?php echo $Delivery["pincode"]?>','<?php echo $Delivery["status"]?>','<?php echo $Delivery["id_proof_type"]?>');"><i class="bx bx-edit-alt me-1"></i> </a>
-                        
-							<a  href="javascript:deletedata('<?php echo $Delivery["db_id"]?>');"><i class="bx bx-trash me-1"></i> </a>
-                        
-                        	<a href="javascript:viewdata('<?php echo $Delivery["db_id"]?>','<?php echo $Delivery["name"]?>','<?php echo $Delivery["email"]?>','<?php echo $Delivery["contact"]?>','<?php echo base64_encode($Delivery["address"])?>','<?php echo $Delivery["city"]?>','<?php echo $Delivery["pincode"]?>','<?php echo $Delivery["status"]?>','<?php echo $Delivery["id_proof_type"]?>');">View</a>
-                        
+                        	<a href="javascript:editdata('<?php echo $Delivery["db_id"]?>','<?php echo base64_encode($Delivery["name"])?>','<?php echo base64_encode($Delivery["email"])?>','<?php echo base64_encode($Delivery["contact"])?>','<?php echo base64_encode($Delivery["address"])?>','<?php echo $Delivery["city"]?>','<?php echo $Delivery["pincode"]?>','<?php echo $Delivery["id_proof_type"]?>','<?php echo base64_encode($Delivery["id_proof"])?>','<?php echo $Delivery["zone_id"]?>','<?php echo $Delivery["status"]?>');"><i class="bx bx-edit-alt me-1"></i> </a>
+							            <a  href="javascript:deletedata('<?php echo $Delivery["db_id"]?>','<?php echo base64_encode($Delivery["id_proof"])?>');"><i class="bx bx-trash me-1"></i> </a>
+                        	<a href="javascript:viewdata('<?php echo $Delivery["db_id"]?>','<?php echo base64_encode($Delivery["name"])?>','<?php echo base64_encode($Delivery["email"])?>','<?php echo base64_encode($Delivery["contact"])?>','<?php echo base64_encode($Delivery["address"])?>','<?php echo $Delivery["city"]?>','<?php echo $Delivery["pincode"]?>','<?php echo $Delivery["id_proof_type"]?>','<?php echo base64_encode($Delivery["id_proof"])?>','<?php echo $Delivery["zone_id"]?>','<?php echo $Delivery["status"]?>');">View</i> </a>
+                          
                         </td>
                   
                         
@@ -380,63 +455,97 @@ if(isset($_COOKIE["msg"]) )
 
             <!-- / Content -->
 <script type="text/javascript">
-  function deletedata(id) {
+  function readURL(input) {
+      if (input.files && input.files[0]) {
+          var filename=input.files.item(0).name;
+
+          var reader = new FileReader();
+          var extn=filename.split(".");
+
+           if(extn[1].toLowerCase()=="jpg" || extn[1].toLowerCase()=="jpeg" || extn[1].toLowerCase()=="png" || extn[1].toLowerCase()=="bmp") {
+            reader.onload = function (e) {
+                $('#PreviewImageP').attr('src', e.target.result);
+                  document.getElementById("PreviewImageP").style.display = "block";
+            };
+
+            reader.readAsDataURL(input.files[0]);
+            $('#imgdiv').html("");
+            document.getElementById('btnsubmit').disabled = false;
+      }
+        else
+        {
+            $('#imgdiv').html("Please Select Image Only");
+            document.getElementById('btnsubmit').disabled = true;
+        }
+    }
+  }
+
+  function deletedata(id,id_proof) {
 
       if(confirm("Are you sure to DELETE data?")) {
-          var loc = "deliveryboy_reg.php?flg=del&n_id=" + id;
+          var loc = "deliveryboy_reg.php?flg=del&n_id="+id+"&id_proof="+atob(id_proof);
           window.location = loc;
       }
   }
-  function editdata(id,name,email,contact,address,city,pincode,status,id_type) {
-           
+  function editdata(id,name,email,contact,address,city,pincode,id_type,id_proof,zone,status) {           
 	   	$('#ttId').val(id);
-      $('#name').val(name);
-      $('#email').val(email);
-      $('#contact').val(contact);
-      $('#pincode').val(pincode);
-      $('#city').val(city);
-			$('#address').val(atob(address));
-      $('#id_type').val(id_type);
-      $('#pass_div').hide();
-			if(status=="enable")
-		   	{
-				$('#enable').attr("checked","checked");	
-		   	}
-		   	else if(status=="disable")
-		   	{
-				$('#disable').attr("checked","checked");	
-		   	}
-			
-			$('#btnsubmit').attr('hidden',true);
-            $('#btnupdate').removeAttr('hidden');
-			$('#btnsubmit').attr('disabled',true);
-
-        }
-  function viewdata(id,name,email,contact,address,city,pincode,status,id_type) {
-           
-	   	$('#ttId').val(id);
-      $('#name').val(name);
-      $('#email').val(email);
-      $('#contact').val(contact);
-      $('#pincode').val(pincode);
-      $('#city').val(city);
+      $('#name').val(atob(name));
+      $('#email').val(atob(email));
+      $('#contact').val(atob(contact));
       $('#address').val(atob(address));
-      $('#id_type').val(id_type);
+      $('#city').val(city);
+      $('#pincode').val(pincode);
+			$('#id_type').val(id_type);
+      //$('#id_proof').val(atob(id_proof));
+      $('#hid_proof').val(atob(id_proof));
+      $('#PreviewImage').show();
+      $('#PreviewImage').attr('src','deliveryboy_id/'+atob(id_proof));   
+      $('#id_proof').removeAttr('required');
+      $('#zone').val(zone);
       $('#pass_div').hide();
 			if(status=="enable")
-		   	{
+		  {
 				$('#enable').attr("checked","checked");	
-		   	}
-		   	else if(status=="disable")
-		   	{
+		  }
+		  else if(status=="disable")
+		  {
 				$('#disable').attr("checked","checked");	
-		   	}
+		  }
+			
+		  $('#btnsubmit').attr('hidden',true);
+      $('#btnupdate').removeAttr('hidden');
+		  $('#btnsubmit').attr('disabled',true);
+    }
+  function viewdata(id,name,email,contact,address,city,pincode,id_type,id_proof,zone,status) {     
+	   	$('#ttId').val(id);
+      $('#name').val(atob(name));
+      $('#email').val(atob(email));
+      $('#contact').val(atob(contact));
+      $('#address').val(atob(address));
+      $('#city').val(city);
+      $('#pincode').val(pincode);
+      $('#id_type').val(id_type);
+      //$('#id_proof').val(atob(id_proof));
+      $('#hid_proof').val(atob(id_proof));
+      $('#PreviewImage').show();
+      $('#PreviewImage').attr('src','deliveryboy_id/'+atob(id_proof));   
+      $('#id_proof').removeAttr('required');
+      $('#zone').val(zone);
+      $('#pass_div').hide();
+      if(status=="enable")
+      {
+        $('#enable').attr("checked","checked"); 
+      }
+      else if(status=="disable")
+      {
+        $('#disable').attr("checked","checked");  
+      }
 			
 			$('#btnsubmit').attr('hidden',true);
-            $('#btnupdate').attr('hidden',true);
+      $('#btnupdate').attr('hidden',true);
 			$('#btnsubmit').attr('disabled',true);
-
-        }
+      $('#btnupdate').attr('disabled',true);
+    }
 </script>
 <?php 
 include("footer.php");
