@@ -2,7 +2,7 @@
 include("header.php");
 error_reporting(E_ALL);
 
-$stmt_city = $obj->con1->prepare("select * from city");
+$stmt_city = $obj->con1->prepare("select * from city where status='enable' and LOWER(city_name)='surat' order by city_id desc");
 $stmt_city->execute();
 $res_city = $stmt_city->get_result();
 $stmt_city->close();
@@ -97,8 +97,8 @@ if(isset($_REQUEST['btnupdate']))
   $id=$_REQUEST['ttId'];
   $action='updated';
 
-  if($pp!=""){
-    unlink("deliveryboy_id/".$rpp);  
+ 
+    
     //rename file for id proof
     if ($_FILES["id_proof"]["name"] != "")
     {
@@ -116,15 +116,18 @@ if(isset($_REQUEST['btnupdate']))
       else {
         $PicFileName = $_FILES["id_proof"]["name"];
       }
+      unlink("deliveryboy_id/".$rpp);  
+    }
+    else
+    {
+      $PicFileName=$rpp;
     }
     move_uploaded_file($id_proof_path,"deliveryboy_id/".$PicFileName);
-  }
-  else{
-    $PicFileName=$rpp;
-  }
+ 
 
   try
   {  
+    
     $stmt = $obj->con1->prepare("update delivery_boy set  name=?,`email`=?,`contact`=?,`address`=?,`city`=?,`pincode`=?,`id_proof_type`=?,`id_proof`=?,`zone_id`=?,`status`=?,`action`=? where db_id=?");
 	$stmt->bind_param("ssssisssissi", $name,$email,$contact,$address,$city,$pincode,$id_type,$PicFileName,$zone_id,$status,$action,$id);
 	$Resp=$stmt->execute();
@@ -142,12 +145,12 @@ if(isset($_REQUEST['btnupdate']))
   if($Resp)
   {
 	  setcookie("msg", "update",time()+3600,"/");
-      header("location:deliveryboy_reg.php");
+    header("location:deliveryboy_reg.php");
   }
   else
   {
 	  setcookie("msg", "fail",time()+3600,"/");
-      header("location:deliveryboy_reg.php");
+    header("location:deliveryboy_reg.php");
   }
 }
 
@@ -464,8 +467,8 @@ if(isset($_COOKIE["msg"]) )
 
            if(extn[1].toLowerCase()=="jpg" || extn[1].toLowerCase()=="jpeg" || extn[1].toLowerCase()=="png" || extn[1].toLowerCase()=="bmp") {
             reader.onload = function (e) {
-                $('#PreviewImageP').attr('src', e.target.result);
-                  document.getElementById("PreviewImageP").style.display = "block";
+                $('#PreviewImage').attr('src', e.target.result);
+                  document.getElementById("PreviewImage").style.display = "block";
             };
 
             reader.readAsDataURL(input.files[0]);

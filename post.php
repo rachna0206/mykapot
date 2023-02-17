@@ -68,7 +68,9 @@
     $discount=$_REQUEST['discount'];
     $total_charges=($basic_charge+$ack_charges+$delivery_charge)-$discount;
     $total_payment=$_REQUEST["total_amt"];
-
+    $noti_status=1;
+    $playstatus=1;
+    $noti_type="post";
     try
     {
       
@@ -76,11 +78,18 @@
   	$stmt = $obj->con1->prepare("INSERT INTO `post`( `receiver_name`, `sender_id`, `house_no`, `street_1`, `area`, `city`, `pincode`, `mail_type`, `weight`, `acknowledgement`, `priority`, `collection_address`, `collection_time`, `dispatch_date`, `basic_charges`, `delivery_charge`, `ack_charges`, `total_charges`, `coupon_id`, `discount`, `total_payment`) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)");
   	$stmt->bind_param("sisssisissssssssssiss",$receiver_name,$sender,$house,$street,$area,$city,$pincode,$mail_type,$weight,$ack,$priority,$coll_address,$coll_time,$dispatch_date,$basic_charge,$delivery_charge,$ack_charges,$total_charges,$coupon_id,$discount,$total_payment);
   	$Resp=$stmt->execute();
+     $stmt->close();
+     $insert_id = mysqli_insert_id($obj->con1);
+     //insert into notification
+     $stmt_noti = $obj->con1->prepare("INSERT INTO `notification`( `noti_type`, `noti_type_id`, `status`, `playstatus`) VALUES (?,?,?,?)");
+    $stmt_noti->bind_param("siii",$noti_type,$insert_id,$noti_status,$playstatus);
+    $Resp_noti=$stmt_noti->execute();
+    $stmt_noti->close();
       if(!$Resp)
       {
         throw new Exception("Problem in adding! ". strtok($obj->con1-> error,  '('));
       }
-      $stmt->close();
+     
     } 
     catch(\Exception  $e) {
       setcookie("sql_error", urlencode($e->getMessage()),time()+3600,"/");
@@ -345,15 +354,15 @@
                         <div class="col mb-3">
                             <label class="form-label d-block" for="basic-default-fullname">Priority</label>
                             <div class="form-check form-check-inline mt-3">
-                              <input class="form-check-input" type="radio" name="priority" id="most_urgent" value="yes" required checked>
+                              <input class="form-check-input" type="radio" name="priority" id="most_urgent" value="most urgent" required checked>
                               <label class="form-check-label" for="inlineRadio1">Most Urgent</label>
                             </div>
                             <div class="form-check form-check-inline mt-3">
-                              <input class="form-check-input" type="radio" name="priority" id="urgent" value="no" required>
+                              <input class="form-check-input" type="radio" name="priority" id="urgent" value="urgent" required>
                               <label class="form-check-label" for="inlineRadio1">Urgent</label>
                             </div>
                             <div class="form-check form-check-inline mt-3">
-                              <input class="form-check-input" type="radio" name="priority" id="normal" value="no" required>
+                              <input class="form-check-input" type="radio" name="priority" id="normal" value="normal" required>
                               <label class="form-check-label" for="inlineRadio1">Normal</label>
                             </div>
                         </div>

@@ -1,7 +1,7 @@
 <?php
   include("header.php");
 
-$stmt_city_list = $obj->con1->prepare("select * from city where status='enable' order by city_id desc");
+$stmt_city_list = $obj->con1->prepare("select * from city where status='enable' and LOWER(city_name)='surat' order by city_id desc");
 $stmt_city_list->execute();
 $city_result = $stmt_city_list->get_result();
 $stmt_city_list->close();

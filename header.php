@@ -115,12 +115,12 @@ $reportmenu=array("customer_report.php");
       }
 
       $(function() {
-    // setInterval("get_notification()", 10000);
+     setInterval("get_notification()", 10000);
 
   });
 
 
- /* function get_notification() {
+  function get_notification() {
 
       $.ajax({
           async: true,
@@ -134,39 +134,52 @@ $reportmenu=array("customer_report.php");
               var resp=data.split("@@@@");
               $('#notification_list').html('');
               $('#notification_list').append(resp[0]);
-              $('#notification_count').html('');
+            
               $('#noti_count').html('');
-              
-              if(resp[1]>0) {
-                  $('#notification_count').append(resp[1]);
 
-                  $('#noti_count').append(resp[1]);
+              if(resp[1]>0) {
                   
+                  $("#noti_count").addClass("badge-notifications");
+                  $('#noti_count').append(resp[1]);
+                  $('#notif_header').show();
                   playSound();
+                  
               }
               else
-              {
+              {     
+                  $('#noti_count').removeClass('badge-notifications');
+
                    $('#noti_count').append('');
                    $('#notification_list').hide();
+                   $('#notif_header').hide();
+                   
               }
           }
 
       });
   }
-  function removeNotification(id){
+  function removeNotification(id,typ){
 
       $.ajax({
           async: true,
           type: "GET",
           url: "ajaxdata.php?action=removenotification",
-          data:"id="+id,
+          data:"id="+id+"&type="+typ,
           async: true,
           cache: false,
           timeout:50000,
 
           success: function(data){
-              
-              window.location = "lead_generation.php";
+            
+            if(typ=="customer_reg")
+            {
+
+              window.location = "customer_reg.php";
+            }
+            else
+            {
+              window.location = "post.php";
+            }
             
 
           }
@@ -210,8 +223,27 @@ $reportmenu=array("customer_report.php");
 
       });
 
-  }*/
+  }
+  function mark_read_all()
+  {
+    $.ajax({
+          async: true,
+          type: "GET",
+          url: "ajaxdata.php?action=mark_read_all",
+          data:"",
+          async: true,
+          cache: false,
+          timeout:50000,
+          success: function (data) {
+            $('#notif_header').hide();
+            $('#notification_list').html('');
+            $('#noti_count').html('');
+          }
+
+      });
+  }
     </script>
+  
   </head>
 
   <body>
@@ -361,10 +393,7 @@ $reportmenu=array("customer_report.php");
         <div class="layout-page">
           <!-- Navbar -->
 
-          <nav
-            class="layout-navbar container-xxl navbar navbar-expand-xl navbar-detached align-items-center bg-navbar-theme"
-            id="layout-navbar"
-          >
+          <nav class="layout-navbar container-xxl navbar navbar-expand-xl navbar-detached align-items-center bg-navbar-theme" id="layout-navbar">
             <div class="layout-menu-toggle navbar-nav align-items-xl-center me-3 me-xl-0 d-xl-none">
               <a class="nav-item nav-link px-0 me-xl-4" href="javascript:void(0)">
                 <i class="bx bx-menu bx-sm"></i>
@@ -419,6 +448,28 @@ $reportmenu=array("customer_report.php");
                   <ul class="dropdown-menu dropdown-menu-end" id="notification_list">
                   </ul>
                 </li> -->
+                <!-- Notification -->
+          <li class="nav-item dropdown-notifications navbar-dropdown dropdown me-3 me-xl-1">
+            <a class="nav-link dropdown-toggle hide-arrow" href="javascript:void(0);" data-bs-toggle="dropdown" data-bs-auto-close="outside" >
+              <i class="bx bx-bell bx-sm"></i>
+              <span class="badge bg-danger rounded-pill badge-notifications" id="noti_count"></span>
+            </a>
+            <ul class="dropdown-menu dropdown-menu-end py-0">
+              <li class="dropdown-menu-header border-bottom" id="notif_header" style="display:none">
+                <div class="dropdown-header d-flex align-items-center py-3">
+                  <h5 class="text-body mb-0 me-auto">Notification</h5>
+                  <a href="javascript:mark_read_all()" class="dropdown-notifications-all text-body" data-bs-toggle="tooltip" data-bs-placement="top" title="Mark all as read">Read All</a>
+                </div>
+              </li>
+              <li class="dropdown-notifications-list scrollable-container">
+                <ul class="list-group list-group-flush" id="notification_list">
+                 
+                </ul>
+              </li>
+              
+            </ul>
+          </li>
+          <!--/ Notification -->
              
                 <!-- User -->
                 <li class="nav-item navbar-dropdown dropdown-user dropdown">

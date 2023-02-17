@@ -10,17 +10,29 @@ if(isset($_REQUEST['btnsubmit']))
   $pass = $_REQUEST['password'];
   $contact_no = $_REQUEST['contact'];
   $status = $_REQUEST['status'];
+  $noti_status=1;
+  $playstatus=1;
+  $noti_type="customer_reg";
 
   try
   {
 	$stmt = $obj->con1->prepare("INSERT INTO `customer_reg`(`name`,`email`,`password`,`contact`,`status`) VALUES (?,?,?,?,?)");
 	$stmt->bind_param("sssss",$name,$email,$pass,$contact_no,$status);
 	$Resp=$stmt->execute();
+  $insert_id = mysqli_insert_id($obj->con1);
+  $stmt->close();
+  //inert into notif
+  echo "INSERT INTO `notification`( `noti_type`, `noti_type_id`, `status`, `playstatus`) VALUES ($noti_type,$insert_id,$noti_status,$playstatus)";
+  $stmt_noti = $obj->con1->prepare("INSERT INTO `notification`( `noti_type`, `noti_type_id`, `status`, `playstatus`) VALUES (?,?,?,?)");
+  $stmt_noti->bind_param("siii",$noti_type,$insert_id,$noti_status,$playstatus);
+  $Resp_noti=$stmt_noti->execute();
+  $stmt_noti->close();
+
     if(!$Resp)
     {
       throw new Exception("Problem in adding! ". strtok($obj->con1-> error,  '('));
     }
-    $stmt->close();
+    
   } 
   catch(\Exception  $e) {
     setcookie("sql_error", urlencode($e->getMessage()),time()+3600,"/");
@@ -281,7 +293,7 @@ if(isset($_COOKIE["msg"]) )
                           <a href="javascript:deletedata('<?php echo $cust["id"]?>');"><i class="bx bx-trash me-1"></i> </a>
                         	<a href="javascript:viewdata('<?php echo $cust["id"]?>','<?php echo base64_encode($cust["name"])?>','<?php echo base64_encode($cust["email"])?>','<?php echo base64_encode($cust["password"])?>','<?php echo base64_encode($cust["contact"])?>','<?php echo $cust["status"]?>');">View</a>
                         </td>
-                        <td><a href="javascript:addAddress('<?php echo $cust["id"]?>');">Add Area</a></td>
+                        <td><a href="javascript:addAddress('<?php echo $cust["id"]?>');">Add Address</a></td>
                       </tr>
                       <?php
                           $i++;

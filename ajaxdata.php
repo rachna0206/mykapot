@@ -6,6 +6,107 @@ include("db_connect.php");
 $obj=new DB_Connect();
 if(isset($_REQUEST['action']))
 {
+	// get notification
+	if($_REQUEST['action']=="get_notification")
+	{
+		$html="";
+		
+		$stmt_clist = $obj->con1->prepare("select * from notification where status=1");
+	 	$stmt_clist->execute();
+	  	$notification = $stmt_clist->get_result();
+	  	$count=mysqli_num_rows($notification);
+	  	$stmt_clist->close();
+		$html='';
+	  	while($noti=mysqli_fetch_array($notification))  		
+	  	{
+	  		if($noti["noti_type"]=="customer_reg")
+	  		{
+	  			$stmt_cust = $obj->con1->prepare("select * from customer_reg where id='".$noti["noti_type_id"]."'");
+
+	  		}
+	  		else 
+	  		{
+	  			$stmt_cust = $obj->con1->prepare("select c.* from post p,customer_reg c where p.sender_id=c.id and p.id='".$noti["noti_type_id"]."'");
+	  		}
+	  		
+		 	$stmt_cust->execute();
+		 	$noti_resp=$stmt_cust->get_result();
+		  	$notification_cust = $noti_resp->fetch_assoc();
+		  	
+		  	$stmt_cust->close();
+		  	if($noti["noti_type"]=="customer_reg")
+	  		{
+	  			$html.= '<li class="list-group-item list-group-item-action dropdown-notifications-item"><div class="d-flex flex-column"><a class="dropdown-item" href="javascript:removeNotification('.$noti["id"].',\''.$noti["noti_type"].'\')"><span class="align-middle">New user registered <br/><small class="text-success fw-semibold">'.$notification_cust["name"].'- '.$notification_cust["contact"].'</small></span></a></div>	</li>';
+	  		}
+	  		else
+	  		{
+	  			$html.= '<li class="list-group-item list-group-item-action dropdown-notifications-item"><div class="d-flex flex-column"><a class="dropdown-item" href="javascript:removeNotification('.$noti["id"].',\''.$noti["noti_type"].'\')"><span class="align-middle">You have got new Post Job<br/><small class="text-success fw-semibold">'.$notification_cust["name"].' - '.$notification_cust["contact"].'</small></span></a></div>	</li>';
+	  		}
+
+			
+	  	}
+	  	echo $html."@@@@".$count."@@@@";
+	}
+	// remove notification
+	if($_REQUEST['action']=="removenotification")
+	{
+		$html="";
+		$id=$_REQUEST["id"];
+		$stmt_list = $obj->con1->prepare("update notification set `status`=0,`playstatus`=0 where id=?");
+		$stmt_list->bind_param("i",$id);
+	 	$stmt_list->execute();
+  	
+  	$stmt_list->close();
+	}
+
+
+	// get play notification
+	if($_REQUEST['action']=="get_Playnotification")
+	{
+		$html="";
+		$ids="";
+		$stmt_clist = $obj->con1->prepare("select * from notification where playstatus=1");
+	 	$stmt_clist->execute();
+	  	$lead_notification = $stmt_clist->get_result();
+	  	$count=mysqli_num_rows($lead_notification);
+
+	  	$stmt_clist->close();
+			$html='';
+		  	while($noti=mysqli_fetch_array($lead_notification))
+		  	{
+					$ids.=$noti["id"].",";
+		  	}
+	  	echo $count."@@@@".rtrim($ids,",");
+	}
+	// remove play sound
+	if ($_REQUEST["action"] == "removeplaysound") {
+
+    $ids=explode(',',$_REQUEST["id"]);
+  
+   
+    for($i=0;$i<sizeof($ids);$i++)
+    {
+      
+
+      $stmt_clist = $obj->con1->prepare("UPDATE `notification` SET `playstatus`=0 WHERE id=?");
+      $stmt_clist->bind_param("i",$ids[$i]);
+	$stmt_clist->execute();
+  	$stmt_clist->close();
+    }
+    
+}
+
+// read all
+	if($_REQUEST['action']=="mark_read_all")
+	{
+		$html="";
+		
+		$stmt_list = $obj->con1->prepare("update notification set `status`=0,`playstatus`=0 ");
+		$stmt_list->bind_param("i",$id);
+	 	$stmt_list->execute();
+  	
+  	$stmt_list->close();
+	}
 	if($_REQUEST['action']=="areaList")
 	{	
 		$html="";
