@@ -362,6 +362,16 @@ $reportmenu=array("customer_report.php");
                 <div data-i18n="course">Post Master</div>
                 </a>
               </li>
+               <li class="menu-item <?php echo basename($_SERVER["PHP_SELF"])=="post_review.php"?"active":"" ?>">
+                <a href="post_review.php" class="menu-link">
+                <div data-i18n="course">Post Review</div>
+                </a>
+              </li>
+               <li class="menu-item <?php echo basename($_SERVER["PHP_SELF"])=="customer_feedback.php"?"active":"" ?>">
+                <a href="customer_feedback.php" class="menu-link">
+                <div data-i18n="course">Customer Feedback</div>
+                </a>
+              </li>
 
               </ul>
             </li>
@@ -376,7 +386,19 @@ $reportmenu=array("customer_report.php");
                 
                 <li class="menu-item <?php echo basename($_SERVER["PHP_SELF"])=="customer_report.php"?"active":"" ?>">
                   <a href="customer_report.php" class="menu-link">
+                  <div data-i18n="course">Post Job Report</div>
+                  </a>
+                </li>
+                
+                <li class="menu-item <?php echo basename($_SERVER["PHP_SELF"])=="cust_report.php"?"active":"" ?>">
+                  <a href="cust_report.php" class="menu-link">
                   <div data-i18n="course">Customer Report</div>
+                  </a>
+                </li>
+                
+                <li class="menu-item <?php echo basename($_SERVER["PHP_SELF"])=="delivery_boy_report.php"?"active":"" ?>">
+                  <a href="delivery_boy_report.php" class="menu-link">
+                  <div data-i18n="course">Delivery Boy Report</div>
                   </a>
                 </li>
                 
@@ -401,37 +423,7 @@ $reportmenu=array("customer_report.php");
             </div>
 
             <div class="navbar-nav-right d-flex align-items-center" id="navbar-collapse">
-              <div class="navbar-nav align-items-center">
-                <div class="nav-item d-flex align-items-center">
-                  <ul class="dropdown-menu ">
-                    
-                    <li>
-                      <a class="dropdown-item" href="#">
-                        <i class="bx bx-user me-2"></i>
-                        <span class="align-middle"><?php echo ucfirst($_SESSION["username"])?></span>
-                      </a>
-                    </li>
-                   
-                    
-                    <li>
-                      <div class="dropdown-divider"></div>
-                    </li>
-                    <li>
-                      <a class="dropdown-item" href="logout.php">
-                        <i class="bx bx-power-off me-2"></i>
-                        <span class="align-middle">Log Out</span>
-                      </a>
-                    </li>
-                  </ul>
-                  <!-- <a class="dropdown-item" href="#">
-                        <span class="d-flex align-items-center align-middle">
-                          <i class="flex-shrink-0 bx bx-credit-card me-2"></i>
-                          
-                          <span class="flex-shrink-0 badge badge-center rounded-pill bg-success w-px-20 h-px-20">4</span>
-                        </span>
-                      </a> -->
-                </div>
-              </div>
+              
 
               <ul class="navbar-nav flex-row align-items-center ms-auto">
                 <!-- Place this tag where you want the button to render. -->
@@ -481,7 +473,7 @@ $reportmenu=array("customer_report.php");
                   <ul class="dropdown-menu dropdown-menu-end">
                     
                     <li>
-                      <a class="dropdown-item" href="#">
+                      <a class="dropdown-item" href="editProfile.php">
                         <i class="bx bx-user me-2"></i>
                         <span class="align-middle"><?php echo ucfirst($_SESSION["username"])?></span>
                       </a>
@@ -491,6 +483,16 @@ $reportmenu=array("customer_report.php");
                     <li>
                       <div class="dropdown-divider"></div>
                     </li>
+                    <li>
+                      <a class="dropdown-item" href="changePassword.php">
+                        <i class="bx bx-lock me-2"></i>
+                        <span class="align-middle">Change Password</span>
+                      </a>
+                    </li>
+                    <li>
+                      <div class="dropdown-divider"></div>
+                    </li>
+
                     <li>
                       <a class="dropdown-item" href="logout.php">
                         <i class="bx bx-power-off me-2"></i>

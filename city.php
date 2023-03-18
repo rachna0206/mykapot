@@ -256,7 +256,7 @@ if(isset($_COOKIE["msg"]) )
                     </thead>
                     <tbody class="table-border-bottom-0">
                       <?php 
-                        $stmt_list = $obj->con1->prepare("select  * from city c1, state s1 where c1.state=s1.state_id order by c1.city_id desc");
+                        $stmt_list = $obj->con1->prepare("select  c1.*,s1.state_name,s1.state_id from city c1, state s1 where c1.state=s1.state_id order by c1.city_id desc");
                         $stmt_list->execute();
                         $result = $stmt_list->get_result();
                         
@@ -270,8 +270,11 @@ if(isset($_COOKIE["msg"]) )
                         <td><?php echo $i?></td>
                         <td><?php echo $city["city_name"]?></td>
                         <td><?php echo $city["state_name"]?></td>
-                        <td><?php echo $city["status"]?></td>
-                        
+                        <?php if($city["status"]=='enable'){	?>
+                          <td style="color:green"><?php echo $city["status"]?></td>
+                        <?php } else if($city["status"]=='disable'){	?>
+                          <td style="color:red"><?php echo $city["status"]?></td>
+                        <?php } ?>
                     
                         <td>
                         
@@ -315,11 +318,11 @@ if(isset($_COOKIE["msg"]) )
 			$('#city_name').val(atob(cname));
 			if(status=="enable")
 		   	{
-				$('#enable').attr("checked","checked");	
+				$('#enable').prop("checked","checked");	
 		   	}
 		   	else if(status=="disable")
 		   	{
-				$('#disable').attr("checked","checked");	
+				$('#disable').prop("checked","checked");	
 		   	}
 			
 			$('#btnsubmit').attr('hidden',true);
@@ -329,21 +332,22 @@ if(isset($_COOKIE["msg"]) )
         }
   function viewdata(id,stateid,cname,status) {
            
-		   	$('#ttId').val(id);
-            $('#state').val(stateid);
+	   	$('#ttId').val(id);
+      $('#state').val(stateid);
 			$('#city_name').val(atob(cname));
 			if(status=="enable")
-		   	{
-				$('#enable').attr("checked","checked");	
-		   	}
-		   	else if(status=="disable")
-		   	{
-				$('#disable').attr("checked","checked");	
-		   	}
+	   	{
+			 $('#enable').attr("checked","checked");	
+	   	}
+	   	else if(status=="disable")
+	   	{
+			 $('#disable').attr("checked","checked");	
+	   	}
 			
 			$('#btnsubmit').attr('hidden',true);
-            $('#btnupdate').attr('hidden',true);
+      $('#btnupdate').attr('hidden',true);
 			$('#btnsubmit').attr('disabled',true);
+			$('#btnupdate').attr('disabled',true);
 
         }
 </script>

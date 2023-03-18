@@ -24,6 +24,10 @@ if(isset($_REQUEST['action']))
 	  			$stmt_cust = $obj->con1->prepare("select * from customer_reg where id='".$noti["noti_type_id"]."'");
 
 	  		}
+	  		else if($noti["noti_type"]=="delivery_reg")
+	  		{
+	  			$stmt_cust = $obj->con1->prepare("select * from delivery_boy where db_id='".$noti["noti_type_id"]."'");
+	  		}
 	  		else 
 	  		{
 	  			$stmt_cust = $obj->con1->prepare("select c.* from post p,customer_reg c where p.sender_id=c.id and p.id='".$noti["noti_type_id"]."'");
@@ -37,6 +41,10 @@ if(isset($_REQUEST['action']))
 		  	if($noti["noti_type"]=="customer_reg")
 	  		{
 	  			$html.= '<li class="list-group-item list-group-item-action dropdown-notifications-item"><div class="d-flex flex-column"><a class="dropdown-item" href="javascript:removeNotification('.$noti["id"].',\''.$noti["noti_type"].'\')"><span class="align-middle">New user registered <br/><small class="text-success fw-semibold">'.$notification_cust["name"].'- '.$notification_cust["contact"].'</small></span></a></div>	</li>';
+	  		}
+	  		else if($noti["noti_type"]=="delivery_reg")
+	  		{
+	  			$html.= '<li class="list-group-item list-group-item-action dropdown-notifications-item"><div class="d-flex flex-column"><a class="dropdown-item" href="javascript:removeNotification('.$noti["id"].',\''.$noti["noti_type"].'\')"><span class="align-middle">New delivery boy registered <br/><small class="text-success fw-semibold">'.$notification_cust["name"].'- '.$notification_cust["contact"].'</small></span></a></div>	</li>';
 	  		}
 	  		else
 	  		{
@@ -231,6 +239,130 @@ if(isset($_REQUEST['action']))
            
             echo 1;
         }
+	}
+
+	if($_REQUEST['action']=="check_deliboy_contact")
+	{
+		$html="";
+		$contact_no=$_REQUEST["contact_no"];
+		$id=$_REQUEST['id'];
+		if($id!=""){
+			$stmt_contact = $obj->con1->prepare("select * from delivery_boy where contact=? and db_id!=?");
+			$stmt_contact->bind_param("si",$contact_no,$id);
+		}
+		else{	
+			$stmt_contact = $obj->con1->prepare("select * from delivery_boy where contact=?");
+			$stmt_contact->bind_param("s",$contact_no);
+		}
+		$stmt_contact->execute();
+		$res = $stmt_contact->get_result();
+		$stmt_contact->close();
+		if(mysqli_num_rows($res)>0){
+			$html=1;
+		}
+		else{
+			$html=0;
+		}
+
+		echo $html;
+	}
+
+	if($_REQUEST['action']=="check_deliboy_email")
+	{
+		$html="";
+		$email_id=$_REQUEST["email_id"];
+		$id=$_REQUEST['id'];
+		if($id!=""){
+			$stmt_email = $obj->con1->prepare("select * from delivery_boy where email=? and db_id!=?");
+			$stmt_email->bind_param("si",$email_id,$id);
+		}
+		else{	
+			$stmt_email = $obj->con1->prepare("select * from delivery_boy where email=?");
+			$stmt_email->bind_param("s",$email_id);
+		}
+		$stmt_email->execute();
+		$res = $stmt_email->get_result();
+		$stmt_email->close();
+		if(mysqli_num_rows($res)>0){
+			$html=1;
+		}
+		else{
+			$html=0;
+		}
+
+		echo $html;
+	}
+
+	if($_REQUEST['action']=="check_cust_contact")
+	{
+		$html="";
+		$contact_no=$_REQUEST["contact_no"];
+		$id=$_REQUEST['id'];
+		if($id!=""){
+			$stmt_contact = $obj->con1->prepare("select * from customer_reg where contact=? and id!=?");
+			$stmt_contact->bind_param("si",$contact_no,$id);
+		}
+		else{	
+			$stmt_contact = $obj->con1->prepare("select * from customer_reg where contact=?");
+			$stmt_contact->bind_param("s",$contact_no);
+		}
+		$stmt_contact->execute();
+		$res = $stmt_contact->get_result();
+		$stmt_contact->close();
+		if(mysqli_num_rows($res)>0){
+			$html=1;
+		}
+		else{
+			$html=0;
+		}
+
+		echo $html;
+	}
+
+	if($_REQUEST['action']=="check_cust_email")
+	{
+		$html="";
+		$email_id=$_REQUEST["email_id"];
+		$id=$_REQUEST['id'];
+		if($id!=""){
+			$stmt_email = $obj->con1->prepare("select * from customer_reg where email=? and id!=?");
+			$stmt_email->bind_param("si",$email_id,$id);
+		}
+		else{	
+			$stmt_email = $obj->con1->prepare("select * from customer_reg where email=?");
+			$stmt_email->bind_param("s",$email_id);
+		}
+		$stmt_email->execute();
+		$res = $stmt_email->get_result();
+		$stmt_email->close();
+		if(mysqli_num_rows($res)>0){
+			$html=1;
+		}
+		else{
+			$html=0;
+		}
+
+		echo $html;
+	}
+
+	if($_REQUEST['action']=="check_cust_coupon")
+	{
+		$html="";
+		$customer_id=$_REQUEST["customer_id"];
+		$coupon_id=$_REQUEST['coupon_id'];
+		$stmt = $obj->con1->prepare("select * from coupon_counter where customer_id=? and coupon_id=?");
+		$stmt->bind_param("ii",$customer_id,$coupon_id);
+		$stmt->execute();
+		$res = $stmt->get_result();
+		$stmt->close();
+		if(mysqli_num_rows($res)>0){
+			$html=1;
+		}
+		else{
+			$html=0;
+		}
+
+		echo $html;
 	}
 }
 

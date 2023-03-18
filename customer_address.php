@@ -358,7 +358,7 @@ if(isset($_COOKIE["msg"]) )
       areaList(city);
       setTimeout(function() {
           $('#area_id').val(area);
-      }, 100);
+      }, 1000);
       $('#pincode').val(atob(pincode));
 			
 			$('#btnsubmit').attr('hidden',true);
@@ -375,7 +375,7 @@ if(isset($_COOKIE["msg"]) )
       areaList(city);
       setTimeout(function() {
           $('#area_id').val(area);
-      }, 100);
+      }, 1000);
       $('#pincode').val(atob(pincode));
 			
 			$('#btnsubmit').attr('hidden',true);

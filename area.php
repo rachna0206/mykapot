@@ -305,7 +305,11 @@ if(isset($_COOKIE["msg"]) )
                         <td><?php echo $area["pincode"]?></td>
                         <td><?php echo $area["city_name"]?></td>
                         <td><?php echo $area["zone_name"]?></td>
-                        <td><?php echo $area["status"]?></td>
+                    <?php if($area["status"]=='enable'){	?>
+                        <td style="color:green"><?php echo $area["status"]?></td>
+                    <?php } else if($area["status"]=='disable'){	?>
+                        <td style="color:red"><?php echo $area["status"]?></td>
+                    <?php } ?>
                         <td>
                         	<a href="javascript:editdata('<?php echo $area["aid"]?>','<?php echo base64_encode($area["area_name"])?>','<?php echo $area["pincode"]?>','<?php echo $area["city"]?>','<?php echo $area["zone"]?>','<?php echo $area["status"]?>');"><i class="bx bx-edit-alt me-1"></i> </a>
                           <a href="javascript:deletedata('<?php echo $area["aid"]?>');"><i class="bx bx-trash me-1"></i> </a>

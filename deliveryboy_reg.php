@@ -278,14 +278,16 @@ if(isset($_COOKIE["msg"]) )
                           </div>
                           <div class="col mb-3">
                             <label for="nameWithTitle" class="form-label">Contact</label>
-                            <input type="text" id="contact" name="contact" class="form-control"  />
+                            <input type="text" id="contact" name="contact" class="form-control" onkeyup ="check_deliboy_contact(this.value)" />
+                            <div id="contact_alert_div" class="text-danger"></div>
                           </div>
                           
                         </div>
                         <div class="row">
                           <div class="col mb-3">
                             <label for="nameWithTitle" class="form-label">E-mail</label>
-                            <input type="email" id="email" name="email" class="form-control"  />
+                            <input type="email" id="email" name="email" class="form-control" onkeyup ="check_deliboy_email(this.value)" />
+                            <div id="email_alert_div" class="text-danger"></div>
                           </div>
                           
                           <div class="col mb-3" id="pass_div">
@@ -429,9 +431,11 @@ if(isset($_COOKIE["msg"]) )
                         <td><?php echo $Delivery["contact"]?></td>
                         <td><?php echo $Delivery["city_name"]?></td>
                         <td><?php echo $Delivery["pincode"]?></td>
-                        <td><?php echo $Delivery["status"]?></td>
-                        
-                    
+                    <?php if($Delivery["status"]=='enable'){	?>
+                        <td style="color:green"><?php echo $Delivery["status"]?></td>
+                    <?php } else if($Delivery["status"]=='disable'){	?>
+                        <td style="color:red"><?php echo $Delivery["status"]?></td>
+                    <?php } ?>
                         <td>
                         
                         	<a href="javascript:editdata('<?php echo $Delivery["db_id"]?>','<?php echo base64_encode($Delivery["name"])?>','<?php echo base64_encode($Delivery["email"])?>','<?php echo base64_encode($Delivery["contact"])?>','<?php echo base64_encode($Delivery["address"])?>','<?php echo $Delivery["city"]?>','<?php echo $Delivery["pincode"]?>','<?php echo $Delivery["id_proof_type"]?>','<?php echo base64_encode($Delivery["id_proof"])?>','<?php echo $Delivery["zone_id"]?>','<?php echo $Delivery["status"]?>');"><i class="bx bx-edit-alt me-1"></i> </a>
@@ -458,6 +462,58 @@ if(isset($_COOKIE["msg"]) )
 
             <!-- / Content -->
 <script type="text/javascript">
+
+  function check_deliboy_contact(contact_no)
+  {
+    var id=$('#ttId').val();
+    $.ajax({
+      async: true,
+      type: "POST",
+      url: "ajaxdata.php?action=check_deliboy_contact",
+      data: "contact_no="+contact_no+"&id="+id,
+      cache: false,
+      success: function(result){
+        if(result>0){
+          $('#contact_alert_div').html('Contact Number already taken');
+          document.getElementById('btnsubmit').disabled = true;
+          document.getElementById('btnupdate').disabled = true;
+          
+        }
+        else{
+          $('#contact_alert_div').html('');
+          document.getElementById('btnsubmit').disabled = false;
+          document.getElementById('btnupdate').disabled = false;
+          
+        }
+      }
+    });
+  }
+
+  function check_deliboy_email(email_id)
+  {
+    var id=$('#ttId').val();
+    $.ajax({
+      async: true,
+      type: "POST",
+      url: "ajaxdata.php?action=check_deliboy_email",
+      data: "email_id="+email_id+"&id="+id,
+      cache: false,
+      success: function(result){
+        if(result>0){
+          $('#email_alert_div').html('Email ID already taken');
+          document.getElementById('btnsubmit').disabled = true;
+          document.getElementById('btnupdate').disabled = true;
+        }
+        else{
+          $('#email_alert_div').html('');
+          document.getElementById('btnsubmit').disabled = false;
+          document.getElementById('btnupdate').disabled = false;
+        }
+      }
+    });
+  }
+
+
   function readURL(input) {
       if (input.files && input.files[0]) {
           var filename=input.files.item(0).name;

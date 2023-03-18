@@ -260,9 +260,13 @@ if(isset($_COOKIE["msg"]) )
 
                       <tr>
                         <td><?php echo $i?></td>
-                        <td><?php echo $ctime["start_time"]?></td>
-                        <td><?php echo $ctime["end_time"]?></td>
-                        <td><?php echo $ctime["status"]?></td>
+                        <td><?php echo date("h:i a",strtotime($ctime["start_time"]))?></td>
+                        <td><?php echo date("h:i a",strtotime($ctime["end_time"]))?></td>
+                    <?php if($ctime["status"]=='enable'){	?>
+                        <td style="color:green"><?php echo $ctime["status"]?></td>
+                    <?php } else if($ctime["status"]=='disable'){	?>
+                        <td style="color:red"><?php echo $ctime["status"]?></td>
+                    <?php } ?>
                         <td><?php echo $ctime["name"]?></td>
                         <td>
                         	<a href="javascript:editdata('<?php echo $ctime["id"]?>','<?php echo base64_encode($ctime["start_time"])?>','<?php echo base64_encode($ctime["end_time"])?>','<?php echo $ctime["status"]?>');"><i class="bx bx-edit-alt me-1"></i> </a>

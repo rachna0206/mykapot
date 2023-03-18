@@ -1,6 +1,6 @@
 <?php
   include("header.php");
-
+error_reporting(E_ALL);
   //customer list
   $stmt_slist = $obj->con1->prepare("select * from customer_reg");
   $stmt_slist->execute();
@@ -65,7 +65,7 @@
     $ack_charges=$_REQUEST['ack_charge'];
     
     $coupon_id=$_REQUEST['coupon'];
-    $discount=$_REQUEST['discount'];
+    $discount=isset($_REQUEST['discount'])?$_REQUEST['discount']:"0";
     $total_charges=($basic_charge+$ack_charges+$delivery_charge)-$discount;
     $total_payment=$_REQUEST["total_amt"];
     $noti_status=1;
@@ -80,8 +80,50 @@
   	$Resp=$stmt->execute();
      $stmt->close();
      $insert_id = mysqli_insert_id($obj->con1);
-     //insert into notification
-     $stmt_noti = $obj->con1->prepare("INSERT INTO `notification`( `noti_type`, `noti_type_id`, `status`, `playstatus`) VALUES (?,?,?,?)");
+
+     //assign post to dboy
+
+     //get zoneid from customer address
+    $stmt_zone = $obj->con1->prepare("SELECT a1.aid,a1.zone,a1.pincode FROM customer_address c1 ,area a1 where c1.area_id=a1.aid and c1.ca_id=?");
+    $stmt_zone->bind_param("i",$coll_address);
+    $stmt_zone->execute();
+    $Resp_zone=$stmt_zone->get_result()->fetch_assoc();
+    $stmt_zone->close();
+
+    // get dboy from zone
+    
+    $stmt_dboy = $obj->con1->prepare("select * from delivery_boy where zone_id=?");
+    $stmt_dboy->bind_param("i",$Resp_zone["zone"]);
+    $stmt_dboy->execute();
+    $Resp_dboy=$stmt_dboy->get_result();
+    $stmt_dboy->close();
+    while($dboy=mysqli_fetch_array($Resp_dboy))
+    {
+      // assign post to dboy
+      $distance="";
+      $job_status="pending";
+      $stmt_post_assign = $obj->con1->prepare("INSERT INTO `job_assign`( `delivery_boy_id`, `post_id`, `job_status`, `distance`) VALUES (?,?,?,?)");
+      $stmt_post_assign->bind_param("iiss",$dboy["db_id"],$insert_id,$job_status,$distance);
+      $Resp_post=$stmt_post_assign->execute();
+      $stmt_post_assign->close();
+
+    }
+
+
+     
+
+     if($coupon_id!="")
+     {
+      /*//decrease coustomer coupon count
+        $stmt_list = $obj->con1->prepare("update coupon_counter set `counter`=? where sr_no=?");
+        $stmt_list->bind_param("ii",$counter,$p_row["sr_no"]);
+        $stmt_list->execute();
+          
+        $stmt_list->close();*/
+     }
+     
+    //insert into notification
+    $stmt_noti = $obj->con1->prepare("INSERT INTO `notification`( `noti_type`, `noti_type_id`, `status`, `playstatus`) VALUES (?,?,?,?)");
     $stmt_noti->bind_param("siii",$noti_type,$insert_id,$noti_status,$playstatus);
     $Resp_noti=$stmt_noti->execute();
     $stmt_noti->close();
@@ -99,7 +141,7 @@
     if($Resp)
     {
   	  setcookie("msg", "data",time()+3600,"/");
-      header("location:post.php");
+    //  header("location:post.php");
     }
     else
     {
@@ -108,71 +150,7 @@
     }
   }
 
-  if(isset($_REQUEST['btnupdate']))
-  {
-    $state_id = $_REQUEST['state'];
-    $post_name = $_REQUEST['post_name'];
-    $status = $_REQUEST['status'];
-    $id=$_REQUEST['ttId'];
-    $action='updated';
-    try
-    {
-      $stmt = $obj->con1->prepare("update post set post_name=?, state=?, status=?,action=? where post_id=?");
-  	$stmt->bind_param("sissi", $post_name,$state_id,$status,$action,$id);
-  	$Resp=$stmt->execute();
-      if(!$Resp)
-      {
-        throw new Exception("Problem in updating! ". strtok($obj->con1-> error,  '('));
-      }
-      $stmt->close();
-    } 
-    catch(\Exception  $e) {
-      setcookie("sql_error", urlencode($e->getMessage()),time()+3600,"/");
-    }
-
-
-    if($Resp)
-    {
-  	  setcookie("msg", "update",time()+3600,"/");
-        header("location:post.php");
-    }
-    else
-    {
-  	  setcookie("msg", "fail",time()+3600,"/");
-        header("location:post.php");
-    }
-  }
-
-  // delete data
-  if(isset($_REQUEST["flg"]) && $_REQUEST["flg"]=="del")
-  {
-    try
-    {
-      $stmt_del = $obj->con1->prepare("delete from post where id='".$_REQUEST["n_id"]."'");
-    	$Resp=$stmt_del->execute();
-      if(!$Resp)
-      {
-        throw new Exception("Problem in deleting! ". strtok($obj->con1-> error,  '('));
-      }
-      $stmt_del->close();
-    } 
-    catch(\Exception  $e) {
-      setcookie("sql_error", urlencode($e->getMessage()),time()+3600,"/");
-    }
-
-
-    if($Resp)
-    {
-  	setcookie("msg", "data_del",time()+3600,"/");
-      header("location:post.php");
-    }
-    else
-    {
-  	setcookie("msg", "fail",time()+3600,"/");
-      header("location:post.php");
-    }
-  }
-
+ 
   ?>
 
   <h4 class="fw-bold py-3 mb-4">Post Master</h4>
@@ -334,8 +312,8 @@
                         </div>
                         <div class="row g-2">
                           <div class="col mb-3">
-                            <label class="form-label d-block" for="basic-default-fullname">Approx Weight</label>
-                            <input type="text" class="form-control" name="weight" id="weight" required onblur="get_amount(this.value)"/>
+                            <label class="form-label d-block" for="basic-default-fullname">Approx Weight(in grams)</label>
+                            <input type="number" min="1" class="form-control" name="weight" id="weight" required onblur="get_amount(this.value)"/>
                           </div>
                           
                           <div class="col mb-3">
@@ -480,7 +458,7 @@
                       </thead>
                       <tbody class="table-border-bottom-0">
                         <?php 
-                          $stmt_list = $obj->con1->prepare("select p1.*,a1.area_name,c1.city_name,c2.id as cust_name,c2.name as cust_name,ca.*,c4.id as coll_time_id,c4.start_time,c4.end_time  from post p1,area a1,city c1,mail_type m1,customer_address ca,customer_reg c2,coupon c3,collection_time c4 where ca.area_id=a1.aid and p1.city=c1.city_id  and p1.mail_type=m1.id and p1.collection_address=ca.ca_id and p1.sender_id=c2.id and p1.collection_time=c4.id and p1.coupon_id=c3.c_id order by p1.id desc");
+                          $stmt_list = $obj->con1->prepare("select p1.*,a1.area_name,c1.city_name,c2.id as cust_name,c2.name as cust_name,ca.*,c4.id as coll_time_id,c4.start_time,c4.end_time  from post p1,area a1,city c1,mail_type m1,customer_address ca,customer_reg c2,collection_time c4 where ca.area_id=a1.aid and p1.city=c1.city_id  and p1.mail_type=m1.id and p1.collection_address=ca.ca_id and p1.sender_id=c2.id and p1.collection_time=c4.id  order by p1.id desc");
                           $stmt_list->execute();
                           $result = $stmt_list->get_result();
                           
@@ -582,6 +560,11 @@
     }
     function get_coupon_disc(val)
     {
+      var sender=$('#sender').val();
+      var basic_charge=$('#basic_charge').val();
+      var ack_charge=$('#ack_charge').val();
+      var del_charge=$('#delivery_charge').val();
+      var main_total=parseInt(basic_charge)+parseInt(ack_charge)+parseInt(del_charge);
       if(val!="")
       {
 
@@ -590,7 +573,7 @@
           async: true,
           type: "POST",
           url: "ajaxdata.php?action=get_coupon_disc",
-          data: "coupon_id="+val+"&total_amt="+total_amt,
+          data: "coupon_id="+val+"&total_amt="+total_amt+"&sender="+sender,
           cache: false,
           success: function(result){
            // var total_amt=parseInt(result)+parseInt(ack_charge)+parseInt(del_charge);
@@ -598,12 +581,12 @@
             if (result == 1) {
                 $("#coupon").val('');
                 $('#coupon_alert').html('Invalid Coupon Code');
-                
+                $('#total_amt').val(main_total);
 
             } else if (result == 2) {
                 $("#coupon").val('');
                 $('#coupon_alert').html('Amount is too small');
-                
+                $('#total_amt').val(main_total);
             } else {
                 var data = result.split("@@@@@");
                 var tamount = parseFloat(total_amt) - parseFloat(data[1]);
@@ -637,25 +620,7 @@
             window.location = loc;
         }
     }
-    function editdata(id,stateid,cname,status) {
-             
-  		   	$('#ttId').val(id);
-              $('#state').val(stateid);
-  			$('#post_name').val(atob(cname));
-  			if(status=="enable")
-  		   	{
-  				$('#enable').attr("checked","checked");	
-  		   	}
-  		   	else if(status=="disable")
-  		   	{
-  				$('#disable').attr("checked","checked");	
-  		   	}
-  			
-  			$('#btnsubmit').attr('hidden',true);
-              $('#btnupdate').removeAttr('hidden');
-  			$('#btnsubmit').attr('disabled',true);
-
-          }
+    
     function viewdata(id,stateid,cname,status) {
              
   		   	$('#ttId').val(id);

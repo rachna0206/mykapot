@@ -118,7 +118,7 @@ if(isset($_REQUEST["flg"]) && $_REQUEST["flg"]=="del")
 
 ?>
 
-<h4 class="fw-bold py-3 mb-4">Customer Registration</h4>
+<h4 class="fw-bold py-3 mb-4">Coupon Counter</h4>
 
 <?php 
 if(isset($_COOKIE["msg"]) )
@@ -193,7 +193,7 @@ if(isset($_COOKIE["msg"]) )
                 <div class="col-xl">
                   <div class="card mb-4">
                     <div class="card-header d-flex justify-content-between align-items-center">
-                      <h5 class="mb-0">Add Customer</h5>
+                      <h5 class="mb-0">Add Coupon Counter</h5>
                       
                     </div>
                     <div class="card-body">
@@ -203,7 +203,7 @@ if(isset($_COOKIE["msg"]) )
                         <input type="hidden" name="ttId2" id="ttId2">
                         <div class="mb-3">
                           <label class="form-label" for="basic-default-fullname">Customer</label>
-                          <select name="customer" id="customer" class="form-control" required>
+                          <select name="customer" id="customer" class="form-control" onblur="chechCustCoupon(this.value,coupon.value)" required>
                             <option value="">Select Customer Name</option>
                     <?php    
                         while($result=mysqli_fetch_array($cust_result)){
@@ -216,7 +216,7 @@ if(isset($_COOKIE["msg"]) )
                         </div>
                         <div class="mb-3">
                         <label class="form-label" for="basic-default-fullname">Coupon</label>
-                          <select name="coupon" id="coupon" class="form-control" required>
+                          <select name="coupon" id="coupon" class="form-control" onblur="chechCustCoupon(customer.value,this.value)" required>
                             <option value="">Select Coupen Name</option>
                     <?php    
                         while($result=mysqli_fetch_array($coup_result)){
@@ -230,7 +230,7 @@ if(isset($_COOKIE["msg"]) )
                         <div class="mb-3">
                           <label class="form-label" for="basic-default-company">Counter</label>
                           <input type="text" class="form-control" name="count" id="count" required />
-
+                          <div id="calert_div" class="text-danger"></div>
                         </div>
                     
                         <button type="submit" name="btnsubmit" id="btnsubmit" class="btn btn-primary">Save</button>
@@ -256,7 +256,7 @@ if(isset($_COOKIE["msg"]) )
                       <tr>
                         <th>Srno</th>
                         <th>Customer Name</th>
-                        <th>Coupon I.D.</th>
+                        <th>Coupon</th>
                         <th>Counter</th>
                         <th>Date/Time</th>
                         <th>Admin I.D.</th>
@@ -265,7 +265,7 @@ if(isset($_COOKIE["msg"]) )
                     </thead>
                     <tbody class="table-border-bottom-0">
                       <?php 
-                        $stmt_list = $obj->con1->prepare("select c1.*,c2.name from coupon_counter c1,customer_reg c2 where c1.customer_id=c2.id order by id desc");
+                        $stmt_list = $obj->con1->prepare("select c1.*,c2.name as cust_name, c3.name as coupon from coupon_counter c1,customer_reg c2, coupon c3 where c1.customer_id=c2.id and c1.coupon_id=c3.c_id order by id desc");
                         $stmt_list->execute();
                         $result = $stmt_list->get_result();
                         
@@ -277,8 +277,8 @@ if(isset($_COOKIE["msg"]) )
 
                       <tr>
                         <td><?php echo $i?></td>
-                        <td><?php echo $cust["name"]?></td>
-                        <td><?php echo $cust["coupon_id"]?></td>
+                        <td><?php echo $cust["cust_name"]?></td>
+                        <td><?php echo $cust["coupon"]?></td>
                         <td><?php echo $cust["counter"]?></td>
                         <td><?php echo $cust["date/time"]?></td>
                         <td><?php echo $cust["admin_id"]?></td>
@@ -300,6 +300,30 @@ if(isset($_COOKIE["msg"]) )
               <!--/ Basic Bootstrap Table -->
 
 <script type="text/javascript">
+
+  function chechCustCoupon(cust,coup){
+    $.ajax({
+      async: true,
+      type: "POST",
+      url: "ajaxdata.php?action=check_cust_coupon",
+      data: "customer_id="+cust+"&coupon_id="+coup,
+      cache: false,
+      success: function(result){
+        if(result>0){
+          $('#calert_div').html('This Coupon is already assigned to Customer');
+          document.getElementById('btnsubmit').disabled = true;
+          document.getElementById('btnupdate').disabled = true;
+        }
+        else{
+          $('#calert_div').html('');
+          document.getElementById('btnsubmit').disabled = false;
+          document.getElementById('btnupdate').disabled = false;
+        }
+      }
+    });
+  }
+
+
   function deletedata(id) {
 
       if(confirm("Are you sure to DELETE data?")) {

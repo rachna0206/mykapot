@@ -16,19 +16,34 @@ class DbOperation
 public function customer_reg($name,$email,$password,$contact,$status,$action)
 {
 
-    
-    $stmt = $this->con->prepare("INSERT INTO `customer_reg`( `name`, `email`, `password`, `contact`,`status`,`action`) VALUES(?,?,?,?,?,?)");
-    $stmt->bind_param("ssssss", $name,$email,$password,$contact,$status,$action);
-   
-    $result = $stmt->execute();
-    $lastId=mysqli_insert_id($this->con);
-    $stmt->close();
-    
-    if ($result) {
+    if (!$this->isemailIDExists($email)) 
+    {
 
-        return 1;
-    } else {
-        return 0;
+        if (!$this->isContactExists($contact)) 
+        {
+
+            $stmt = $this->con->prepare("INSERT INTO `customer_reg`( `name`, `email`, `password`, `contact`,`status`,`action`) VALUES(?,?,?,?,?,?)");
+            $stmt->bind_param("ssssss", $name,$email,$password,$contact,$status,$action);
+           
+            $result = $stmt->execute();
+            $lastId=mysqli_insert_id($this->con);
+            $stmt->close();
+            
+            if ($result) {
+
+                return $lastId;
+            } else {
+                return 0;
+            }
+        }
+        else
+        {
+            return -2;
+        }
+    }
+    else
+    {
+        return -3;
     }
 }
 
@@ -89,7 +104,7 @@ public function add_post($receiver_name,$sender,$house,$street,$area,$city,$pinc
 // get coupon list
  public function coupon_list()
 {
-    $stmt = $this->con->prepare("SELECT * FROM coupon where `status`='enable' ");
+    $stmt = $this->con->prepare("SELECT c_id,name FROM coupon where `status`='enable' ");
     
     $stmt->execute();
     $result = $stmt->get_result();
@@ -108,23 +123,98 @@ public function add_post($receiver_name,$sender,$house,$street,$area,$city,$pinc
     return $result;
 }
 
+// user login
+
+public function customerLogin($email, $pass)
+{
+   
+    
+    $stmt = $this->con->prepare("SELECT * FROM customer_reg WHERE email=? and BINARY password =?");
+    $stmt->bind_param("ss", $email, $pass);
+    $stmt->execute();
+    $stmt->store_result();
+    $num_rows = $stmt->num_rows;
+    $stmt->close();
+    return $num_rows > 0;
+    
+}
+
+  //Method to get user details by email
+public function getUser($email)
+{
+    $stmt = $this->con->prepare("SELECT * FROM customer_reg WHERE email=?");
+    $stmt->bind_param("s", $email);
+    $stmt->execute();
+    $user = $stmt->get_result()->fetch_assoc();
+    $stmt->close();
+    return $user;
+}
+
+
+//add customer device
+public function insert_customer_device($userid,$token,$type)
+{
+
+    $stmt = $this->con->prepare("INSERT INTO `customer_devices`(`cust_id`, `device_token`, `device_type`) VALUES (?,?,?)");
+    $stmt->bind_param("iss", $userid, $token, $type);
+   
+    $result = $stmt->execute();
+    $stmt->close();
+    
+    if ($result) {
+        return 1;
+    } else {
+        return 0;
+    }
+}
+
+// check if email already exists
+
+private function isemailIDExists($email)
+{
+
+    $stmt = $this->con->prepare("SELECT id from customer_reg WHERE email = ?");
+    $stmt->bind_param("s", $email);
+    $stmt->execute();
+    $stmt->store_result();
+    $num_rows = $stmt->num_rows;
+    $stmt->close();
+    return $num_rows > 0;
+}
+// check if contact already exists
+
+private function isContactExists($contact)
+{
+    $stmt = $this->con->prepare("SELECT id from customer_reg WHERE contact = ?");
+    $stmt->bind_param("s", $contact);
+    $stmt->execute();
+    $stmt->store_result();
+    $num_rows = $stmt->num_rows;
+    $stmt->close();
+    return $num_rows > 0;
+}
+
+//insert notification
+public function new_notification($noti_type,$pid,$msg,$status,$playstatus)
+{
+
+   
+    $stmt = $this->con->prepare("INSERT INTO `notification`(`noti_type`, `noti_type_id`,`msg`,`status`,`playstatus`) VALUES (?,?,?,?,?)");
+    $stmt->bind_param("sisii",$noti_type,$pid,$msg,$status,$playstatus);
+    $result = $stmt->execute();
+   
+    $stmt->close();
+
+    if ($result) {
+        return 1;
+    } else {
+        return 0;
+    }
+
+}
 //------------------------------------//
 
-    // student login
-
-    public function studentLogin($userid, $pass)
-    {
-       
-        
-        $stmt = $this->con->prepare("SELECT * FROM student WHERE user_id=? and BINARY password =?");
-        $stmt->bind_param("ss", $userid, $pass);
-        $stmt->execute();
-        $stmt->store_result();
-        $num_rows = $stmt->num_rows;
-        $stmt->close();
-        return $num_rows > 0;
-        
-    }
+    
     // get student data
     public function getStudent($userid)
     {
@@ -137,22 +227,7 @@ public function add_post($receiver_name,$sender,$house,$street,$area,$city,$pinc
         return $stu;
     }
 
-    //add student device
-    public function insert_student_device($userid,$token,$type)
-    {
- 
-        $stmt = $this->con->prepare("INSERT INTO `student_device`(`stu_id`, `device_token`, `device_type`) VALUES (?,?,?)");
-        $stmt->bind_param("iss", $userid, $token, $type);
-       
-        $result = $stmt->execute();
-        $stmt->close();
-        
-        if ($result) {
-            return 1;
-        } else {
-            return 0;
-        }
-    }
+    
 
     // faculty login
 
@@ -664,16 +739,7 @@ public function faculty_password_update($uid, $password)
         $stmt->close();
         return $user;
     }
-     //Method to get user details by email
-    public function getUser($email)
-    {
-        $stmt = $this->con->prepare("SELECT * FROM register WHERE email=?");
-        $stmt->bind_param("s", $email);
-        $stmt->execute();
-        $user = $stmt->get_result()->fetch_assoc();
-        $stmt->close();
-        return $user;
-    }
+   
 
     public function getUser_with_phone($phone_number)
     {
@@ -1378,18 +1444,7 @@ public function faculty_password_update($uid, $password)
         $stmt->close();
         return $user;
     }
-    private function isemailIDExists($email)
-    {
-
-        $stmt = $this->con->prepare("SELECT id from register WHERE email = ?");
-        $stmt->bind_param("s", $email);
-        $stmt->execute();
-        $stmt->store_result();
-        $num_rows = $stmt->num_rows;
-        $stmt->close();
-        return $num_rows > 0;
-    }
-
+   
 
 
     // get graduation list
@@ -1657,16 +1712,6 @@ public function faculty_password_update($uid, $password)
         return $user;
     }
 
-    private function isContactExists($contact)
-    {
-        $stmt = $this->con->prepare("SELECT id from register WHERE contact = ?");
-        $stmt->bind_param("s", $contact);
-        $stmt->execute();
-        $stmt->store_result();
-        $num_rows = $stmt->num_rows;
-        $stmt->close();
-        return $num_rows > 0;
-    }
   
      private function generateApiKey(){
         return md5(uniqid(rand(), true));

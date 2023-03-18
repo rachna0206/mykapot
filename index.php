@@ -89,6 +89,35 @@ if(isset($_REQUEST["login"])){
     <!--! Template customizer & Theme config files MUST be included after core stylesheets and helpers.js in the <head> section -->
     <!--? Config:  Mandatory theme config file contain global vars & default theme options, Set your preferred theme option in this file.  -->
     <script src="assets/js/config.js"></script>
+    <script type="text/javascript">
+      function createCookie(name, value, days) {
+        var expires;
+        if (days) {
+            var date = new Date();
+            date.setTime(date.getTime() + (days * 24 * 60 * 60 * 1000));
+            expires = "; expires=" + date.toGMTString();
+        } else {
+            expires = "";
+        }
+        document.cookie = (name) + "=" + String(value) + expires + ";path=/ ";
+
+    }
+
+    function readCookie(name) {
+        var nameEQ = (name) + "=";
+        var ca = document.cookie.split(';');
+        for (var i = 0; i < ca.length; i++) {
+            var c = ca[i];
+            while (c.charAt(0) === ' ') c = c.substring(1, c.length);
+            if (c.indexOf(nameEQ) === 0) return (c.substring(nameEQ.length, c.length));
+        }
+        return null;
+    }
+
+    function eraseCookie(name) {
+        createCookie(name, "", -1);
+    }
+</script>
   </head>
 
   <body>
@@ -149,9 +178,9 @@ if(isset($_REQUEST["login"])){
                 <div class="mb-3 form-password-toggle">
                   <div class="d-flex justify-content-between">
                     <label class="form-label" for="password">Password</label>
-                    <!-- <a href="auth-forgot-password-basic.html">
+                    <a href="forgot_pass.php">
                       <small>Forgot Password?</small>
-                    </a> -->
+                    </a>
                   </div>
                   <div class="input-group input-group-merge">
                     <input required

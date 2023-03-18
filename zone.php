@@ -248,7 +248,11 @@ if(isset($_COOKIE["msg"]) )
                       <tr>
                         <td><?php echo $i?></td>
                         <td><?php echo $zone["zone_name"]?></td>
-                        <td><?php echo $zone["status"]?></td>
+                    <?php if($zone["status"]=='enable'){	?>
+                        <td style="color:green"><?php echo $zone["status"]?></td>
+                    <?php } else if($zone["status"]=='disable'){	?>
+                        <td style="color:red"><?php echo $zone["status"]?></td>
+                    <?php } ?>
                         <td>
                         	<a href="javascript:editdata('<?php echo $zone["zid"]?>','<?php echo base64_encode($zone["zone_name"])?>','<?php echo $zone["status"]?>');"><i class="bx bx-edit-alt me-1"></i> </a>
                           <a href="javascript:deletedata('<?php echo $zone["zid"]?>');"><i class="bx bx-trash me-1"></i> </a>

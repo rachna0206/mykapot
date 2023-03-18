@@ -44,7 +44,7 @@ if(isset($_REQUEST['btnsubmit']))
 
 ?>
 
-<h4 class="fw-bold py-3 mb-4">Student Report</h4>
+<h4 class="fw-bold py-3 mb-4">Post Job Report</h4>
 
 
 
@@ -83,7 +83,7 @@ if(isset($_REQUEST['btnsubmit']))
 
           <button type="submit" name="btnsubmit" id="btnsubmit" class="btn btn-primary">Submit</button>
         
-          <button type="reset" name="btncancel" id="btncancel" class="btn btn-secondary" onclick="window.location='stu_report.php'">Cancel</button>
+          <button type="reset" name="btncancel" id="btncancel" class="btn btn-secondary" onclick="window.location='customer_report.php'">Cancel</button>
 
         </form>
       </div>
@@ -93,7 +93,7 @@ if(isset($_REQUEST['btnsubmit']))
 
 <!-- Basic Bootstrap Table -->
               <div class="card">
-                <h5 class="card-header">Customer Post Records</h5>
+                <h5 class="card-header">Post Job Records</h5>
                
                 <div class="table-responsive text-nowrap">
                   <table class="table" id="table_id">

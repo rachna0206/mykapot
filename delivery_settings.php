@@ -296,7 +296,11 @@ if(isset($_COOKIE["msg"]) )
                         <td><?php echo $delivery["minimum_delivery_kilometer"]?></td>
                         <td><?php echo $delivery["minimum_delivery_charge"]?></td>
                         <td><?php echo $delivery["per_kilometer_charges"]?></td>
-                        <td><?php echo $delivery["status"]?></td>
+                    <?php if($delivery["status"]=='enable'){	?>
+                        <td style="color:green"><?php echo $delivery["status"]?></td>
+                    <?php } else if($delivery["status"]=='disable'){	?>
+                        <td style="color:red"><?php echo $delivery["status"]?></td>
+                    <?php } ?>
                         <td>
                           <a href="javascript:editdata('<?php echo $delivery["id"]?>','<?php echo $delivery["minimum_delivery_kilometer"]?>','<?php echo $delivery["minimum_delivery_charge"]?>','<?php echo $delivery["per_kilometer_charges"]?>','<?php echo $delivery["max_radius"]?>','<?php echo $delivery["delivery_percentage"]?>','<?php echo $delivery["city"]?>','<?php echo $delivery["status"]?>');"><i class="bx bx-edit-alt me-1"></i> </a>
                           <a href="javascript:deletedata('<?php echo $delivery["id"]?>');"><i class="bx bx-trash me-1"></i> </a>

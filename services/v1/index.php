@@ -74,16 +74,36 @@ $app->post('/customer_reg', function () use ($app) {
     $db = new DbOperation();
     $data = array();
     $data["data"] = array();  
-    if($db->customer_reg($name,$email,$password,$contact,$status,$action))
+    $res_customer=$db->customer_reg($name,$email,$password,$contact,$status,$action);
+    if($res_customer>0)
     {
 
         $data['message'] = "Customer added successfully";
         $data['success'] = true;
+        //send notification to admin
+
+        $adminstatus=1;
+        $adminplaystatus=1;
+        $noti_type="customer_reg";
+        $msg="New user registered";
+        $notification = $db->new_notification($noti_type, $res_customer,$msg,$adminstatus,$adminplaystatus);
+    }
+    else if ($res_customer==-2)
+    {
+        $data['message'] = "Contact number already exist!";
+        $data['success'] = false;
+
+    }
+    else if ($res_customer==-3)
+    {
+        $data['message'] = "Email-id already exist!";
+        $data['success'] = false;
+
     }
     else
     {
         $data['message'] = "An error occurred";
-        $data['success'] = true;
+        $data['success'] = false;
     }
        
     echoResponse(200, $data);
@@ -319,7 +339,7 @@ $app->post('/mail_type', function () use ($app) {
 
 /* *
  * user login
- * Parameters: username, password,device_token,type
+ * Parameters: email, password,device_token,type
  * Method: POST
  * 
  */
@@ -327,33 +347,42 @@ $app->post('/mail_type', function () use ($app) {
 $app->post('/login', function () use ($app) {
     verifyRequiredParams(array('data'));
     $data = json_decode($app->request->post('data'));
-    $userid = $data->userid;
+    $email = $data->email;
     $password = $data->password;
     $device_token = $data->device_token;
     $device_type = $data->device_type;
-    $user_type = $data->user_type;
+    
     $db = new DbOperation();
     $data = array();
     
 
    
-    if ($db->studentLogin($userid, $password)) 
+    if ($db->customerLogin($email, $password)) 
     {
-        $student = $db->getStudent($userid);
-        
-        $response = new stdClass();
+        $cust = $db->getUser($email);
+        $response = array();
+        if($cust["status"]=="enable")
+        {
 
-       $response = new stdClass();
+           
 
-        foreach ($student as $key => $value) {
-            $response->$key= $value;
+            foreach ($cust as $key => $value) {
+                $response[$key]= $value;
+            }
+            
+
+            $insert_device = $db->insert_customer_device($cust['id'], $device_token, $device_type);
+            $data["data"]=$response;
+            $data['success'] = true;
+        }
+        else{
+            $data["data"]=$response;
+            $data["success"] = false;
+            $data["message"]="User is disabled!";
         }
         
-
-        $insert_device = $db->insert_student_device($student['sid'], $device_token, $device_type);
-        $data["data"]=$response;
-        $data['success'] = true;
-        $data["user_type"]=$user_type;
+        
+        
         
 
     }

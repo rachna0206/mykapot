@@ -58,7 +58,7 @@ if(isset($_REQUEST['btnupdate']))
   try
   {
     $stmt = $obj->con1->prepare("update coupon set name=?, couponcode=?, discount=?, max_discount=?, min_amount=?, start_date=?, end_date=?, info=?, status=?, action=? where c_id=?");
-  	$stmt->bind_param("ssdddsssssi", $name,$code,$discount,$max_discount,$amt,$start_date,$end_date,$descrip,$status,$action,$id);
+  	$stmt->bind_param("ssdddsssssi", $name,$code,$discount,$max_discount,$amt,$start_dt,$end_dt,$descrip,$status,$action,$id);
   	$Resp=$stmt->execute();
     if(!$Resp)
     {
@@ -299,7 +299,11 @@ if(isset($_COOKIE["msg"]) )
                         <td><?php echo $coupon["discount"]?></td>
                         <td><?php echo $coupon["s_dt"]?></td>
                         <td><?php echo $coupon["e_dt"]?></td>
-                        <td><?php echo $coupon["status"]?></td>
+                    <?php if($coupon["status"]=='enable'){	?>
+                        <td style="color:green"><?php echo $coupon["status"]?></td>
+                    <?php } else if($coupon["status"]=='disable'){	?>
+                        <td style="color:red"><?php echo $coupon["status"]?></td>
+                    <?php } ?>
                         <td>
                         	<a href="javascript:editdata('<?php echo $coupon["c_id"]?>','<?php echo base64_encode($coupon["name"])?>','<?php echo base64_encode($coupon["couponcode"])?>','<?php echo base64_encode($coupon["discount"])?>','<?php echo base64_encode($coupon["max_discount"])?>','<?php echo base64_encode($coupon["min_amount"])?>','<?php echo base64_encode($coupon["start_date"])?>','<?php echo base64_encode($coupon["end_date"])?>','<?php echo base64_encode($coupon["info"])?>','<?php echo $coupon["status"]?>');"><i class="bx bx-edit-alt me-1"></i> </a>
                           <a href="javascript:deletedata('<?php echo $coupon["c_id"]?>');"><i class="bx bx-trash me-1"></i> </a>

@@ -253,7 +253,11 @@ if(isset($_COOKIE["msg"]) )
                       <tr>
                         <td><?php echo $i?></td>
                         <td><?php echo $state["state_name"]?></td>
-                        <td><?php echo $state["status"]?></td>
+                    <?php if($state["status"]=='enable'){	?>
+                        <td style="color:green"><?php echo $state["status"]?></td>
+                    <?php } else if($state["status"]=='disable'){	?>
+                        <td style="color:red"><?php echo $state["status"]?></td>
+                    <?php } ?>
                         <td>
                         	<a href="javascript:editdata('<?php echo $state["state_id"]?>','<?php echo base64_encode($state["state_name"])?>','<?php echo $state["status"]?>');"><i class="bx bx-edit-alt me-1"></i> </a>
                           <a href="javascript:deletedata('<?php echo $state["state_id"]?>');"><i class="bx bx-trash me-1"></i> </a>
@@ -316,6 +320,7 @@ if(isset($_COOKIE["msg"]) )
 			$('#btnsubmit').attr('hidden',true);
       $('#btnupdate').attr('hidden',true);
 			$('#btnsubmit').attr('disabled',true);
+			$('#btnupdate').attr('disabled',true);
 
   }
 </script>

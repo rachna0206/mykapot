@@ -304,7 +304,11 @@ if(isset($_COOKIE["msg"]) )
                         <td><?php echo $mail["gm_from"]?></td>
                         <td><?php echo $mail["gm_to"]?></td>
                         <td><?php echo $mail["amount"]?></td>
-                        <td><?php echo $mail["status"]?></td>
+                    <?php if($mail["status"]=='enable'){	?>
+                        <td style="color:green"><?php echo $mail["status"]?></td>
+                    <?php } else if($mail["status"]=='disable'){	?>
+                        <td style="color:red"><?php echo $mail["status"]?></td>
+                    <?php } ?>
                         <td><?php echo $mail["name"]?></td>
                         
                         <td>

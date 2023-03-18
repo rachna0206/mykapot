@@ -209,7 +209,8 @@ if(isset($_COOKIE["msg"]) )
 
                         <div class="mb-3">
                           <label class="form-label" for="basic-default-fullname">Email</label>
-                          <input type="text" class="form-control" name="email" id="email" required />
+                          <input type="text" class="form-control" name="email" id="email" required onkeyup ="check_cust_email(this.value)" />
+                          <div id="email_alert_div" class="text-danger"></div>
                         </div>
 
                         <div class="mb-3">
@@ -219,7 +220,8 @@ if(isset($_COOKIE["msg"]) )
 
                         <div class="mb-3">
                           <label class="form-label" for="basic-default-company">Contact No.</label>
-                          <input type="tel" pattern="[0-9]{10}" class="form-control phone-mask" id="contact" name="contact"  required/>
+                          <input type="tel" pattern="[0-9]{10}" class="form-control phone-mask" id="contact" name="contact" onkeyup ="check_cust_contact(this.value)" required/>
+                          <div id="contact_alert_div" class="text-danger"></div>
                         </div>
                         
                         <div class="mb-3">
@@ -287,7 +289,11 @@ if(isset($_COOKIE["msg"]) )
                         <td><?php echo $cust["name"]?></td>
                         <td><?php echo $cust["email"]?></td>
                         <td><?php echo $cust["contact"]?></td>
-                        <td><?php echo $cust["status"]?></td>
+                    <?php if($cust["status"]=='enable'){	?>
+                        <td style="color:green"><?php echo $cust["status"]?></td>
+                    <?php } else if($cust["status"]=='disable'){	?>
+                        <td style="color:red"><?php echo $cust["status"]?></td>
+                    <?php } ?>
                         <td>
                         	<a href="javascript:editdata('<?php echo $cust["id"]?>','<?php echo base64_encode($cust["name"])?>','<?php echo base64_encode($cust["email"])?>','<?php echo base64_encode($cust["password"])?>','<?php echo base64_encode($cust["contact"])?>','<?php echo $cust["status"]?>');"><i class="bx bx-edit-alt me-1"></i> </a>
                           <a href="javascript:deletedata('<?php echo $cust["id"]?>');"><i class="bx bx-trash me-1"></i> </a>
@@ -311,6 +317,58 @@ if(isset($_COOKIE["msg"]) )
 
             <!-- / Content -->
 <script type="text/javascript">
+
+  function check_cust_contact(contact_no)
+  {
+    var id=$('#ttId').val();
+    $.ajax({
+      async: true,
+      type: "POST",
+      url: "ajaxdata.php?action=check_cust_contact",
+      data: "contact_no="+contact_no+"&id="+id,
+      cache: false,
+      success: function(result){
+        if(result>0){
+          $('#contact_alert_div').html('Contact Number already taken');
+          document.getElementById('btnsubmit').disabled = true;
+          document.getElementById('btnupdate').disabled = true;
+        }
+        else{
+          $('#contact_alert_div').html('');
+          document.getElementById('btnsubmit').disabled = false;
+          document.getElementById('btnupdate').disabled = false;
+        }
+      }
+    });
+  }
+
+  function check_cust_email(email_id)
+  {
+    var id=$('#ttId').val();
+    $.ajax({
+      async: true,
+      type: "POST",
+      url: "ajaxdata.php?action=check_cust_email",
+      data: "email_id="+email_id+"&id="+id,
+      cache: false,
+      success: function(result){
+        if(result>0)
+        {
+          $('#email_alert_div').html('Email ID already taken');
+          document.getElementById('btnsubmit').disabled = true;
+          document.getElementById('btnupdate').disabled = true;
+        }
+        else
+        {
+          $('#email_alert_div').html('');
+          document.getElementById('btnsubmit').disabled = false;
+          document.getElementById('btnupdate').disabled = false;
+        }
+      }
+    });
+  }
+
+
   function addAddress(id) {
       document.cookie = "cid="+id;
       var loc = "customer_address.php";
@@ -363,6 +421,7 @@ if(isset($_COOKIE["msg"]) )
 			$('#btnsubmit').attr('hidden',true);
       $('#btnupdate').attr('hidden',true);
 			$('#btnsubmit').attr('disabled',true);
+			$('#btnupdate').attr('disabled',true);
 
   }
 </script>

@@ -262,7 +262,11 @@ if(isset($_COOKIE["msg"]) )
                       <tr>
                         <td><?php echo $i?></td>
                         <td><?php echo $mail["mail_type"]?></td>
-                        <td><?php echo $mail["status"]?></td>
+                    <?php if($mail["status"]=='enable'){	?>
+                        <td style="color:green"><?php echo $mail["status"]?></td>
+                    <?php } else if($mail["status"]=='disable'){	?>
+                        <td style="color:red"><?php echo $mail["status"]?></td>
+                    <?php } ?>
                         <td><?php echo $mail["name"]?></td>
                         
                         <td>
