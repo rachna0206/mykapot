@@ -127,7 +127,7 @@ public function Delivery_boyLogin($email, $pass)
         $today=date("Y-m-d");
         
         
-        $stmt = $this->con->prepare("SELECT p1.id as post_id,p1.receiver_name,c1.name as sender_name,c1.contact as sender_phone,p1.mail_type,p1.acknowledgement,p1.collection_address,p1.priority,p1.dispatch_date,p1.collection_time,j1.job_status,c2.address_label,c2.house_no,c2.street,a1.area_name,c2.pincode FROM job_assign j1,delivery_boy db1,post p1,customer_reg c1,customer_address c2,area a1 where j1.post_id=p1.id and j1.delivery_boy_id=db1.db_id and p1.sender_id=c1.id and p1.collection_address=c2.ca_id and c2.area_id=a1.aid and db1.db_id=? and str_to_date(p1.dispatch_date,'%Y-%m-%d') = str_to_date('".$today."','%Y-%m-%d') order by j1.id desc ");
+        $stmt = $this->con->prepare("SELECT j1.id as job_id,p1.id as post_id,p1.receiver_name,c1.name as sender_name,c1.contact as sender_phone,m1.mail_type,p1.acknowledgement,p1.collection_address,p1.priority,p1.dispatch_date,c3.start_time as collection_start_time,c3.end_time as collection_end_time,j1.job_status,c2.address_label,c2.house_no,c2.street,a1.area_name,c2.pincode,p1.delivery_charge,p1.basic_charges,p1.ack_charges,p1.total_charges,p1.discount,p1.total_payment,p1.post_status,p1.payment_status FROM job_assign j1,delivery_boy db1,post p1,customer_reg c1,customer_address c2,area a1,collection_time c3,mail_type m1 where j1.post_id=p1.id and j1.delivery_boy_id=db1.db_id and p1.sender_id=c1.id and p1.collection_address=c2.ca_id and c2.area_id=a1.aid and p1.collection_time=c3.id and p1.mail_type=m1.id and db1.db_id=? and job_status='pending' order by j1.id desc ");
         $stmt->bind_param("i", $deliveryboy_id);
         $stmt->execute();
         $joblist = $stmt->get_result();
@@ -142,7 +142,7 @@ public function Delivery_boyLogin($email, $pass)
         $today=date("Y-m-d");
         $yesterday=date("Y-m-d",strtotime("-1 days"));
 
-        $stmt = $this->con->prepare("SELECT p1.id as post_id,p1.receiver_name,c1.name as sender_name,c1.contact as sender_phone,p1.mail_type,p1.acknowledgement,p1.collection_address,p1.priority,p1.dispatch_date,p1.collection_time,j1.job_status,c2.address_label,c2.house_no,c2.street,a1.area_name,c2.pincode FROM job_assign j1,delivery_boy db1,post p1,customer_reg c1,customer_address c2,area a1 where j1.post_id=p1.id and j1.delivery_boy_id=db1.db_id and p1.sender_id=c1.id and p1.collection_address=c2.ca_id and c2.area_id=a1.aid and db1.db_id=?  and (j1.job_status='accept' or j1.job_status='dispatch')  order by j1.id ");
+        $stmt = $this->con->prepare("SELECT j1.id as job_id,p1.id as post_id,p1.receiver_name,c1.name as sender_name,c1.contact as sender_phone,m1.mail_type,p1.acknowledgement,p1.collection_address,p1.priority,p1.dispatch_date,c3.start_time as collection_start_time,c3.end_time as collection_end_time,j1.job_status,c2.address_label,c2.house_no,c2.street,a1.area_name,c2.pincode,p1.delivery_charge,p1.basic_charges,p1.ack_charges,p1.total_charges,p1.discount,p1.total_payment,p1.post_status,p1.payment_status FROM job_assign j1,delivery_boy db1,post p1,customer_reg c1,customer_address c2,area a1,collection_time c3,mail_type m1 where j1.post_id=p1.id and j1.delivery_boy_id=db1.db_id and p1.sender_id=c1.id and p1.collection_address=c2.ca_id and c2.area_id=a1.aid and p1.collection_time=c3.id and p1.mail_type=m1.id  and db1.db_id=?  and (j1.job_status='accept' or j1.job_status='dispatch')  order by j1.id ");
         // and post status='pending' or 'collected'
         $stmt->bind_param("i", $deliveryboy_id);
         $stmt->execute();
@@ -158,7 +158,7 @@ public function Delivery_boyLogin($email, $pass)
     {
 
         $today=date("Y-m-d");
-        $stmt = $this->con->prepare("SELECT p1.id as post_id,p1.receiver_name,c1.name as sender_name,c1.contact as sender_phone,p1.mail_type,p1.acknowledgement,p1.collection_address,p1.priority,p1.dispatch_date,p1.collection_time,j1.job_status,c2.address_label,c2.house_no,c2.street,a1.area_name,c2.pincode FROM job_assign j1,delivery_boy db1,post p1,customer_reg c1,customer_address c2,area a1 where j1.post_id=p1.id and j1.delivery_boy_id=db1.db_id and p1.sender_id=c1.id and p1.collection_address=c2.ca_id and c2.area_id=a1.aid and str_to_date(p1.dispatch_date,'%Y-%m-%d') <= str_to_date('".$today."','%Y-%m-%d') and j1.delivery_boy_id=? and j1.job_status='deliver' order by j1.id desc");
+        $stmt = $this->con->prepare("SELECT j1.id as job_id,p1.id as post_id,p1.receiver_name,c1.name as sender_name,c1.contact as sender_phone,m1.mail_type,p1.acknowledgement,p1.collection_address,p1.priority,p1.dispatch_date,c3.start_time as collection_start_time,c3.end_time as collection_end_time,j1.job_status,c2.address_label,c2.house_no,c2.street,a1.area_name,c2.pincode FROM job_assign j1,delivery_boy db1,post p1,customer_reg c1,customer_address c2,area a1,collection_time c3,mail_type m1 where j1.post_id=p1.id and j1.delivery_boy_id=db1.db_id and p1.sender_id=c1.id and p1.collection_address=c2.ca_id and c2.area_id=a1.aid and p1.collection_time=c3.id and p1.mail_type=m1.id and j1.delivery_boy_id=? and j1.job_status='deliver' order by j1.id desc");
         $stmt->bind_param("i", $deliveryboy_id);
         $stmt->execute();
         $joblist = $stmt->get_result();

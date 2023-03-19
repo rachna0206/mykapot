@@ -11,7 +11,7 @@ if(isset($_REQUEST['action']))
 	{
 		$html="";
 		
-		$stmt_clist = $obj->con1->prepare("select * from notification where status=1");
+		$stmt_clist = $obj->con1->prepare("select * from notification where status=1 order by id desc");
 	 	$stmt_clist->execute();
 	  	$notification = $stmt_clist->get_result();
 	  	$count=mysqli_num_rows($notification);

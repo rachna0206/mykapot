@@ -531,7 +531,7 @@ error_reporting(E_ALL);
           data: "weight="+val+"&mail_type="+mail_type,
           cache: false,
           success: function(result){
-            var total_amt=parseInt(result)+parseInt(ack_charge)+parseInt(del_charge);
+            var total_amt=parseFloat(result)+parseFloat(ack_charge)+parseFloat(del_charge);
             $('#basic_charge').html('');
             $('#basic_charge').val(result);
             $('#total_amt').val(total_amt);
@@ -551,7 +551,7 @@ error_reporting(E_ALL);
           
       }
       else{
-          $('#ack_charge').val('');
+          $('#ack_charge').val('0.00');
           var total_amt=parseInt(basic_charge)+parseInt(del_charge);
           
       }
