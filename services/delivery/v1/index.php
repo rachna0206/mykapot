@@ -34,7 +34,7 @@ $app->post('/delivery_reg', function () use ($app) {
     $tokenid = $data->tokenid;
     $device_type = $data->device_type;
     $MainFileName = "";
-    $status="enable";
+    $status="disable";
     $action="added";
     $response["data"]=array();
     $db = new DbOperation();
@@ -409,7 +409,38 @@ $app->post('/city_list', function () use ($app) {
 });
 
 
+/*
+* update delivery boy availability (on/off)
+*param:id
+method:post
+*/
+$app->post('/update_delivery_boy_availability', function () use ($app) {
 
+    verifyRequiredParams(array('data'));
+    $data = json_decode($app->request->post('data'));
+    $reason = $data->reason;
+    $status = $data->status;
+    $id=$data->db_id;
+
+
+    $db = new DbOperation();
+    $data = array();
+
+
+    if ($db->update_delivery_boy_availability($id,$reason,$status)) {
+
+
+        $data['result'] = true;
+        $data['message'] = "Status updated successfully.";
+
+
+    } else {
+        $data['result'] = false;
+        $data['message'] = "Problem in saving data";
+    }
+
+    echoResponse(200, $data);
+});
 
 /*
 * check delivery boy status (enable/disable)
@@ -628,6 +659,84 @@ $app->post('/job_action', function () use ($app) {
 });
 
 
+
+/*
+*name:get job list
+*param:deliveryboy_id
+method:post
+*/
+$app->post('/get_job_detail', function () use ($app) {
+
+    verifyRequiredParams(array('data'));
+    $data = json_decode($app->request->post('data'));
+    $job_id = $data->job_id;
+   // $grams=isset($data->grams)?$data->grams:"";
+
+    $db = new DbOperation();
+    $data = array();
+    $data["data"] = array();
+    $response = array();
+
+    $jobdata = $db->get_job_detail($job_id);
+    
+    if (!empty($jobdata)) {
+        $data['result'] = true;
+        $data['message'] = "";
+        
+        while ($row = $jobdata->fetch_assoc()) {
+
+            foreach ($row as $key => $value) {
+                $temp[$key] = $value;
+            }
+            $temp = array_map('utf8_encode', $temp);
+            array_push($data["data"], $temp);
+
+        }
+    } else {
+        $data['result'] = false;
+        $data['message'] = "No data found";
+    }
+
+    echoResponse(200, $data);
+});
+
+
+
+/*
+URL: https://pragmanxt.com/pragma_demo_multivendor/Mobile_Services/delivery/v1/logout
+ * logout
+ * Parameters:id,tokenid
+ * Method: post
+*/
+$app->post('/logout', function () use ($app) {
+    verifyRequiredParams(array('data'));
+
+    $response = array();
+$data = json_decode($app->request->post('data'));
+    $id = $data->db_id;
+    $tokenid = $data->tokenid;
+
+    $db = new DbOperation();
+    $res = $db->logout($id, $tokenid);
+
+    if ($res == 1) {
+
+
+        $response['result'] = false;
+        $response['value'] = "valid";
+        $response['message'] = "Logged out";
+        echoResponse(201, $response);
+    } else {
+
+        $response['result'] = true;
+        $response['error_code'] = 1;
+        $response['value'] = "invalid";
+        $response['message'] = "Please try again";
+        echoResponse(201, $response);
+    }
+
+});
+
 /*
 * order list
 *param:job_id
@@ -675,40 +784,7 @@ $app->post('/order_list', function () use ($app) {
     echoResponse(200, $data);
 });
 
-/*
-URL: https://pragmanxt.com/pragma_demo_multivendor/Mobile_Services/delivery/v1/logout
- * logout
- * Parameters:id,tokenid
- * Method: post
-*/
-$app->post('/logout', function () use ($app) {
-    verifyRequiredParams(array('id', 'tokenid'));
 
-    $response = array();
-
-    $id = $app->request->post('id');
-    $tokenid = $app->request->post('tokenid');
-
-    $db = new DbOperation();
-    $res = $db->logout($id, $tokenid);
-
-    if ($res == 1) {
-
-
-        $response['result'] = false;
-        $response['value'] = "valid";
-        $response['message'] = "Logged out";
-        echoResponse(201, $response);
-    } else {
-
-        $response['result'] = true;
-        $response['error_code'] = 1;
-        $response['value'] = "invalid";
-        $response['message'] = "Please try again";
-        echoResponse(201, $response);
-    }
-
-});
 
 
 /*
@@ -1055,37 +1131,7 @@ $app->post('/check_delivery_boy_availability', function () use ($app) {
 });
 
 
-/*
-* update delivery boy availability (on/off)
-*param:id
-method:post
-*/
-$app->post('/update_delivery_boy_availability', function () use ($app) {
 
-    verifyRequiredParams(array('id','status'));
-    $id = $app->request->post('id');
-    $reason = $app->request->post('reason');
-    $status = $app->request->post('status');
-
-
-    $db = new DbOperation();
-    $data = array();
-
-
-    if ($db->update_delivery_boy_availability($id,$reason,$status)) {
-
-
-        $data['result'] = true;
-        $data['message'] = "Status updated successfully.";
-
-
-    } else {
-        $data['result'] = false;
-        $data['message'] = "Problem in saving data";
-    }
-
-    echoResponse(200, $data);
-});
 
 /*
  * update password

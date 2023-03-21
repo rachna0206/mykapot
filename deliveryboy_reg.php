@@ -15,19 +15,25 @@ $stmt_zone->close();
 // insert data
 if(isset($_REQUEST['btnsubmit']))
 {
-  echo "<br/>".$name = $_REQUEST['name'];
-  echo "<br/>".$email = $_REQUEST['email'];
-  echo "<br/>".$pass = $_REQUEST['password'];
-  echo "<br/>".$contact = $_REQUEST['contact'];
-  echo "<br/>".$address = $_REQUEST['address'];
-  echo "<br/>".$pincode = $_REQUEST['pincode'];
-  echo "<br/>".$city = $_REQUEST['city'];
-  echo "<br/>".$zone_id = $_REQUEST['zone'];
-  echo "<br/>".$id_type=$_REQUEST['id_type'];
-  echo "<br/>".$id_proof = $_FILES['id_proof']['name'];
-  echo "<br/>".$id_proof_path = $_FILES['id_proof']['tmp_name'];
-  echo "<br/>".$status = $_REQUEST['status'];
-  echo "<br/>".$action='added';
+  $name = $_REQUEST['name'];
+  $email = $_REQUEST['email'];
+  $pass = $_REQUEST['password'];
+  $contact = $_REQUEST['contact'];
+  $address = $_REQUEST['address'];
+  $pincode = $_REQUEST['pincode'];
+  $city = $_REQUEST['city'];
+  $zone_id = $_REQUEST['zone'];
+  $id_type=$_REQUEST['id_type'];
+  $id_proof = $_FILES['id_proof']['name'];
+  $id_proof_path = $_FILES['id_proof']['tmp_name'];
+  $pro_pic = $_FILES['pro_pic']['name'];
+  $pro_pic_path = $_FILES['pro_pic']['tmp_name'];
+  $status = $_REQUEST['status'];
+  $action='added';
+  $noti_type="delivery_reg";
+  $noti_status=1;
+  $playstatus=1;
+  $noti_msg="New delivery boy registered";
 
   //rename file for id proof
   if ($_FILES["id_proof"]["name"] != "")
@@ -47,13 +53,39 @@ if(isset($_REQUEST['btnsubmit']))
           $PicFileName = $_FILES["id_proof"]["name"];
       }
     }
+    //rename file for profile pic
+  if ($_FILES["pro_pic"]["name"] != "")
+    {
+      if(file_exists("deliveryboy_id/" . $pro_pic)) {
+          $i = 0;
+          $ProPicFileName = $_FILES["pro_pic"]["name"];
+          $Arr1 = explode('.', $ProPicFileName);
+
+          $ProPicFileName = $Arr1[0] . $i . "." . $Arr1[1];
+          while (file_exists("deliveryboy_id/" . $ProPicFileName)) {
+              $i++;
+              $ProPicFileName = $Arr1[0] . $i . "." . $Arr1[1];
+          }
+     } 
+     else {
+          $ProPicFileName = $_FILES["pro_pic"]["name"];
+      }
+    }
 
   try
   {
     
-	$stmt = $obj->con1->prepare("INSERT INTO `delivery_boy`( `name`, `email`, `password`, `contact`, `address`, `city`, `pincode`, `id_proof_type`, `id_proof`,`zone_id`, `status`, `action`) values (?,?,?,?,?,?,?,?,?,?,?,?)");
-	$stmt->bind_param("sssssisssiss",$name,$email,$pass,$contact,$address,$city,$pincode,$id_type,$PicFileName,$zone_id,$status,$action);
+	$stmt = $obj->con1->prepare("INSERT INTO `delivery_boy`( `name`, `email`, `password`, `contact`, `address`, `city`, `pincode`, `id_proof_type`, `id_proof`,`zone_id`, `status`, `action`,`profile_pic`) values (?,?,?,?,?,?,?,?,?,?,?,?,?)");
+	$stmt->bind_param("sssssisssisss",$name,$email,$pass,$contact,$address,$city,$pincode,$id_type,$PicFileName,$zone_id,$status,$action,$ProPicFileName);
 	$Resp=$stmt->execute();
+  $insert_id = mysqli_insert_id($obj->con1);
+  $stmt->close();
+  //inert into notif
+ 
+  $stmt_noti = $obj->con1->prepare("INSERT INTO `notification`( `noti_type`, `noti_type_id`,`msg`, `status`, `playstatus`) VALUES (?,?,?,?,?)");
+  $stmt_noti->bind_param("sisii",$noti_type,$insert_id,$msg,$noti_status,$playstatus);
+  $Resp_noti=$stmt_noti->execute();
+  $stmt_noti->close();
     if(!$Resp)
     {
       throw new Exception("Problem in adding! ". strtok($obj->con1-> error,  '('));
@@ -68,6 +100,7 @@ if(isset($_REQUEST['btnsubmit']))
   if($Resp)
   {
     move_uploaded_file($id_proof_path,"deliveryboy_id/".$PicFileName);
+     move_uploaded_file($pro_pic_path,"deliveryboy_id/".$ProPicFileName);
 
 	  setcookie("msg", "data",time()+3600,"/");
     header("location:deliveryboy_reg.php");
@@ -92,7 +125,10 @@ if(isset($_REQUEST['btnupdate']))
   $id_type=$_REQUEST['id_type'];
   $id_proof = $_FILES['id_proof']['name'];
   $id_proof_path = $_FILES['id_proof']['tmp_name'];
+  $pro_pic = $_FILES['pro_pic']['name'];
+  $pro_pic_path = $_FILES['pro_pic']['tmp_name'];
   $rpp= $_REQUEST['hid_proof'];
+  $old_pp=$_REQUEST['hpro_pic'];
   $status = $_REQUEST['status'];
   $id=$_REQUEST['ttId'];
   $action='updated';
@@ -123,13 +159,38 @@ if(isset($_REQUEST['btnupdate']))
       $PicFileName=$rpp;
     }
     move_uploaded_file($id_proof_path,"deliveryboy_id/".$PicFileName);
+
+    // upload profile pic
+    if ($_FILES["pro_pic"]["name"] != "")
+    {
+      if(file_exists("deliveryboy_id/" . $pro_pic)) {
+        $i = 0;
+        $ProPicFileName = $_FILES["pro_pic"]["name"];
+        $Arr1 = explode('.', $ProPicFileName);
+
+        $ProPicFileName = $Arr1[0] . $i . "." . $Arr1[1];
+        while (file_exists("deliveryboy_id/" . $ProPicFileName)) {
+          $i++;
+          $ProPicFileName = $Arr1[0] . $i . "." . $Arr1[1];
+        }
+      } 
+      else {
+        $ProPicFileName = $_FILES["pro_pic"]["name"];
+      }
+      unlink("deliveryboy_id/".$old_pp);  
+    }
+    else
+    {
+      $ProPicFileName=$old_pp;
+    }
+    move_uploaded_file($pro_pic_path,"deliveryboy_id/".$ProPicFileName);
  
 
   try
   {  
     
-    $stmt = $obj->con1->prepare("update delivery_boy set  name=?,`email`=?,`contact`=?,`address`=?,`city`=?,`pincode`=?,`id_proof_type`=?,`id_proof`=?,`zone_id`=?,`status`=?,`action`=? where db_id=?");
-	$stmt->bind_param("ssssisssissi", $name,$email,$contact,$address,$city,$pincode,$id_type,$PicFileName,$zone_id,$status,$action,$id);
+    $stmt = $obj->con1->prepare("update delivery_boy set  name=?,`email`=?,`contact`=?,`address`=?,`city`=?,`pincode`=?,`id_proof_type`=?,`id_proof`=?,`zone_id`=?,`status`=?,`action`=?,`profile_pic`=? where db_id=?");
+	$stmt->bind_param("ssssisssisssi", $name,$email,$contact,$address,$city,$pincode,$id_type,$PicFileName,$zone_id,$status,$action,$ProPicFileName,$id);
 	$Resp=$stmt->execute();
     if(!$Resp)
     {
@@ -338,6 +399,10 @@ if(isset($_COOKIE["msg"]) )
                             <input type="text" id="pincode" name="pincode" class="form-control"  />
                           </div>
                           <div class="col mb-3">
+                            <label for="nameWithTitle" class="form-label">Profile Pic/Selfie</label>
+                            <input type="file" class="form-control" onchange="readURL(this,'PreviewProfile')" name="pro_pic" id="pro_pic" required />
+                             <img src="" name="PreviewProfile" id="PreviewProfile" width="100" height="100" style="display:none;">
+                             <input type="hidden" name="hpro_pic" id="hpro_pic" />
                           </div>
                         </div>
                         <div class="row">
@@ -354,7 +419,7 @@ if(isset($_COOKIE["msg"]) )
                           </div>
                           <div class="col mb-3">
                             <label for="nameWithTitle" class="form-label">Id Proof</label>
-                            <input type="file" class="form-control" onchange="readURL(this)" name="id_proof" id="id_proof" required />
+                            <input type="file" class="form-control" onchange="readURL(this,'PreviewImage')" name="id_proof" id="id_proof" required />
                             <img src="" name="PreviewImage" id="PreviewImage" width="100" height="100" style="display:none;">
                           <div id="imgdiv" style="color:red"></div>
                           <input type="hidden" name="hid_proof" id="hid_proof" />
@@ -431,16 +496,18 @@ if(isset($_COOKIE["msg"]) )
                         <td><?php echo $Delivery["contact"]?></td>
                         <td><?php echo $Delivery["city_name"]?></td>
                         <td><?php echo $Delivery["pincode"]?></td>
-                    <?php if($Delivery["status"]=='enable'){	?>
+                        <?php if($Delivery["status"]=='enable'){  ?>
                         <td style="color:green"><?php echo $Delivery["status"]?></td>
-                    <?php } else if($Delivery["status"]=='disable'){	?>
+                    <?php } else if($Delivery["status"]=='disable'){  ?>
                         <td style="color:red"><?php echo $Delivery["status"]?></td>
                     <?php } ?>
+                        
+                    
                         <td>
                         
-                        	<a href="javascript:editdata('<?php echo $Delivery["db_id"]?>','<?php echo base64_encode($Delivery["name"])?>','<?php echo base64_encode($Delivery["email"])?>','<?php echo base64_encode($Delivery["contact"])?>','<?php echo base64_encode($Delivery["address"])?>','<?php echo $Delivery["city"]?>','<?php echo $Delivery["pincode"]?>','<?php echo $Delivery["id_proof_type"]?>','<?php echo base64_encode($Delivery["id_proof"])?>','<?php echo $Delivery["zone_id"]?>','<?php echo $Delivery["status"]?>');"><i class="bx bx-edit-alt me-1"></i> </a>
-							            <a  href="javascript:deletedata('<?php echo $Delivery["db_id"]?>','<?php echo base64_encode($Delivery["id_proof"])?>');"><i class="bx bx-trash me-1"></i> </a>
-                        	<a href="javascript:viewdata('<?php echo $Delivery["db_id"]?>','<?php echo base64_encode($Delivery["name"])?>','<?php echo base64_encode($Delivery["email"])?>','<?php echo base64_encode($Delivery["contact"])?>','<?php echo base64_encode($Delivery["address"])?>','<?php echo $Delivery["city"]?>','<?php echo $Delivery["pincode"]?>','<?php echo $Delivery["id_proof_type"]?>','<?php echo base64_encode($Delivery["id_proof"])?>','<?php echo $Delivery["zone_id"]?>','<?php echo $Delivery["status"]?>');">View</i> </a>
+                        	<a href="javascript:editdata('<?php echo $Delivery["db_id"]?>','<?php echo base64_encode($Delivery["name"])?>','<?php echo base64_encode($Delivery["email"])?>','<?php echo base64_encode($Delivery["contact"])?>','<?php echo base64_encode($Delivery["address"])?>','<?php echo $Delivery["city"]?>','<?php echo $Delivery["pincode"]?>','<?php echo $Delivery["id_proof_type"]?>','<?php echo base64_encode($Delivery["id_proof"])?>','<?php echo $Delivery["zone_id"]?>','<?php echo $Delivery["status"]?>','<?php echo base64_encode($Delivery["profile_pic"])?>');"><i class="bx bx-edit-alt me-1"></i> </a>
+							            <a  href="javascript:deletedata('<?php echo $Delivery["db_id"]?>','<?php echo base64_encode($Delivery["id_proof"])?>','<?php echo base64_encode($Delivery["profile_pic"])?>');"><i class="bx bx-trash me-1"></i> </a>
+                        	<a href="javascript:viewdata('<?php echo $Delivery["db_id"]?>','<?php echo base64_encode($Delivery["name"])?>','<?php echo base64_encode($Delivery["email"])?>','<?php echo base64_encode($Delivery["contact"])?>','<?php echo base64_encode($Delivery["address"])?>','<?php echo $Delivery["city"]?>','<?php echo $Delivery["pincode"]?>','<?php echo $Delivery["id_proof_type"]?>','<?php echo base64_encode($Delivery["id_proof"])?>','<?php echo $Delivery["zone_id"]?>','<?php echo $Delivery["status"]?>','<?php echo base64_encode($Delivery["profile_pic"])?>');">View</i> </a>
                           
                         </td>
                   
@@ -462,7 +529,6 @@ if(isset($_COOKIE["msg"]) )
 
             <!-- / Content -->
 <script type="text/javascript">
-
   function check_deliboy_contact(contact_no)
   {
     var id=$('#ttId').val();
@@ -513,8 +579,7 @@ if(isset($_COOKIE["msg"]) )
     });
   }
 
-
-  function readURL(input) {
+  function readURL(input,preview) {
       if (input.files && input.files[0]) {
           var filename=input.files.item(0).name;
 
@@ -523,8 +588,8 @@ if(isset($_COOKIE["msg"]) )
 
            if(extn[1].toLowerCase()=="jpg" || extn[1].toLowerCase()=="jpeg" || extn[1].toLowerCase()=="png" || extn[1].toLowerCase()=="bmp") {
             reader.onload = function (e) {
-                $('#PreviewImage').attr('src', e.target.result);
-                  document.getElementById("PreviewImage").style.display = "block";
+                $('#'+preview).attr('src', e.target.result);
+                  document.getElementById(preview).style.display = "block";
             };
 
             reader.readAsDataURL(input.files[0]);
@@ -546,7 +611,7 @@ if(isset($_COOKIE["msg"]) )
           window.location = loc;
       }
   }
-  function editdata(id,name,email,contact,address,city,pincode,id_type,id_proof,zone,status) {           
+  function editdata(id,name,email,contact,address,city,pincode,id_type,id_proof,zone,status,profile_pic) {           
 	   	$('#ttId').val(id);
       $('#name').val(atob(name));
       $('#email').val(atob(email));
@@ -557,9 +622,13 @@ if(isset($_COOKIE["msg"]) )
 			$('#id_type').val(id_type);
       //$('#id_proof').val(atob(id_proof));
       $('#hid_proof').val(atob(id_proof));
+      $('#hpro_pic').val(atob(profile_pic));
       $('#PreviewImage').show();
       $('#PreviewImage').attr('src','deliveryboy_id/'+atob(id_proof));   
       $('#id_proof').removeAttr('required');
+      $('#PreviewProfile').show();
+      $('#PreviewProfile').attr('src','deliveryboy_id/'+atob(profile_pic));   
+      $('#pro_pic').removeAttr('required');
       $('#zone').val(zone);
       $('#pass_div').hide();
 			if(status=="enable")

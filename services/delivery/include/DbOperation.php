@@ -168,10 +168,25 @@ public function Delivery_boyLogin($email, $pass)
 
     }
 
+    // get job detail
+    public function get_job_detail($job_id)
+    {
+
+        $today=date("Y-m-d");
+        $stmt = $this->con->prepare("SELECT j1.id as job_id,p1.id as post_id,p1.receiver_name,c1.name as sender_name,c1.contact as sender_phone,m1.mail_type,p1.acknowledgement,p1.collection_address,p1.priority,p1.dispatch_date,c3.start_time as collection_start_time,c3.end_time as collection_end_time,j1.job_status,c2.address_label,CONCAT(c2.house_no,',',c2.street,',',a1.area_name,',',c4.city_name,',',c2.pincode) as collection_address,concat(p1.house_no,',',p1.street_1,',',p1.area,',',c5.city_name,',',p1.pincode) as receiver_address FROM job_assign j1,delivery_boy db1,post p1,customer_reg c1,customer_address c2,area a1,collection_time c3,mail_type m1,city c4,city c5 where j1.post_id=p1.id and j1.delivery_boy_id=db1.db_id and p1.sender_id=c1.id and p1.collection_address=c2.ca_id and c2.area_id=a1.aid and p1.collection_time=c3.id and p1.mail_type=m1.id and c2.city_id=c4.city_id and p1.city=c5.city_id and j1.id=?  order by j1.id desc");
+        $stmt->bind_param("i", $job_id);
+        $stmt->execute();
+        $joblist = $stmt->get_result();
+        $stmt->close();
+        return $joblist;
+
+
+    }
+
     //get city list
     public function get_city_list()
     {
-        $stmt = $this->con->prepare("select * from city where status='enable'");
+        $stmt = $this->con->prepare("select c1.* from city c1,state s1 where c1.state=s1.state_id and c1.status='enable'");
         
         $stmt->execute();
         $results = $stmt->get_result();
@@ -393,12 +408,11 @@ public function update_order_status($pid,$status,$payment_status)
         {
             $stmt = $this->con->prepare("update job_assign set job_status=? where id=?");
         }
-       // echo "update job_assign set job_status=$status where id=$job_id";
+      
         $stmt->bind_param("si",$status,$job_id);
         $stmt->execute();
          $affected=$stmt->affected_rows;
-        /*$stmt->store_result();
-        $num_rows = $stmt->num_rows;*/
+        
         $stmt->close();
         return $affected > 0;
 
@@ -422,6 +436,43 @@ public function update_order_status($pid,$status,$payment_status)
 
     }
 
+    // logout
+
+     public function logout($id,$tokenid)
+    {
+
+         $stmt = $this->con->prepare("delete from delivery_boy_device where db_id=? and token=?");
+        
+        $stmt->bind_param("is", $id,$tokenid);
+        $result = $stmt->execute();
+        $stmt->close();
+        if ($result) {
+            return 1;
+        } else {
+            return 0;
+        }
+    }
+
+    // update delivery boy availability
+ public function update_delivery_boy_availability($dbid,$reason,$status)
+    {
+        //$status='off';
+         
+       
+        $stmt = $this->con->prepare("INSERT INTO `delivery_boy_avalibility`(`delivery_boy_id`, `status`,`reason`) VALUES (?,?,?)");
+        $stmt->bind_param("iss", $dbid,$status,$reason);
+       
+        $result = $stmt->execute();
+        $stmt->close();
+        
+        if ($result) {
+            return 1;
+        } else {
+            return 0;
+        }
+
+    }
+
     // order list
     public function order_list($job_id)
     {
@@ -439,22 +490,7 @@ public function update_order_status($pid,$status,$payment_status)
     }
 
 
-// logout
 
-     public function logout($id,$tokenid)
-    {
-
-         $stmt = $this->con->prepare("delete from delivery_boy_device where db_id=? and token=?");
-        
-        $stmt->bind_param("is", $id,$tokenid);
-        $result = $stmt->execute();
-        $stmt->close();
-        if ($result) {
-            return 1;
-        } else {
-            return 0;
-        }
-    }
 
     public function fetch_user_android($o_id)
     {
@@ -574,25 +610,7 @@ public function update_order_status($pid,$status,$payment_status)
 
     }
 
-// update delivery boy availability
- public function update_delivery_boy_availability($dbid,$reason,$status)
-    {
-        //$status='off';
-         
-       
-        $stmt = $this->con->prepare("INSERT INTO `delivery_boy_avalibility`(`delivery_boy_id`, `status`,`reason`) VALUES (?,?,?)");
-        $stmt->bind_param("iss", $dbid,$status,$reason);
-       
-        $result = $stmt->execute();
-        $stmt->close();
-        
-        if ($result) {
-            return 1;
-        } else {
-            return 0;
-        }
 
-    }
 
     //insert delivery image
     public function add_delivery_image($job_id,$MainFileName,$status)

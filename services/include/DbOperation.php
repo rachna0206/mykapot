@@ -71,7 +71,7 @@ public function add_post($receiver_name,$sender,$house,$street,$area,$city,$pinc
 // get city list
  public function city_list()
 {
-    $stmt = $this->con->prepare("SELECT * FROM city where `status`='enable' ");
+    $stmt = $this->con->prepare("select c1.* from city c1,state s1 where c1.state=s1.state_id and c1.status='enable' ");
     
     $stmt->execute();
     $result = $stmt->get_result();
