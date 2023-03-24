@@ -8,12 +8,12 @@ error_reporting(E_ALL);
   $stmt_slist->close();
 
   // city list
-
+/*
   $stmt_city = $obj->con1->prepare("select * from city where status='enable'");
   $stmt_city->execute();
   $res_city = $stmt_city->get_result();
   $stmt_city->close();
-
+*/
   // mail type
 
   $stmt_mail= $obj->con1->prepare("select * from mail_type where status='enable'");
@@ -37,11 +37,20 @@ error_reporting(E_ALL);
   $stmt_time->close();
 
   // coupon list
-
+/*
   $stmt_coupon = $obj->con1->prepare("select * from coupon where status='enable'");
   $stmt_coupon->execute();
   $res_coupon = $stmt_coupon->get_result();
   $stmt_coupon->close();
+*/
+
+
+  // delivery charge
+  $stmt_delivery = $obj->con1->prepare("select * from delivery_settings where status='enable'");
+  $stmt_delivery->execute();
+  $res_delivery = $stmt_delivery->get_result();
+  $stmt_delivery->close();
+  $delivery_charge = mysqli_fetch_array($res_delivery);
 
   // insert data
   if(isset($_REQUEST['btnsubmit']))
@@ -71,12 +80,13 @@ error_reporting(E_ALL);
     $noti_status=1;
     $playstatus=1;
     $noti_type="post";
+    $post_status="pending";
     try
     {
       
       
-  	$stmt = $obj->con1->prepare("INSERT INTO `post`( `receiver_name`, `sender_id`, `house_no`, `street_1`, `area`, `city`, `pincode`, `mail_type`, `weight`, `acknowledgement`, `priority`, `collection_address`, `collection_time`, `dispatch_date`, `basic_charges`, `delivery_charge`, `ack_charges`, `total_charges`, `coupon_id`, `discount`, `total_payment`) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)");
-  	$stmt->bind_param("sisssisissssssssssiss",$receiver_name,$sender,$house,$street,$area,$city,$pincode,$mail_type,$weight,$ack,$priority,$coll_address,$coll_time,$dispatch_date,$basic_charge,$delivery_charge,$ack_charges,$total_charges,$coupon_id,$discount,$total_payment);
+  	$stmt = $obj->con1->prepare("INSERT INTO `post`( `receiver_name`, `sender_id`, `house_no`, `street_1`, `area`, `city`, `pincode`, `mail_type`, `weight`, `acknowledgement`, `priority`, `collection_address`, `collection_time`, `dispatch_date`, `basic_charges`, `delivery_charge`, `ack_charges`, `total_charges`, `coupon_id`, `discount`, `total_payment`,`post_status`) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)");
+  	$stmt->bind_param("sisssssissssssssssisss",$receiver_name,$sender,$house,$street,$area,$city,$pincode,$mail_type,$weight,$ack,$priority,$coll_address,$coll_time,$dispatch_date,$basic_charge,$delivery_charge,$ack_charges,$total_charges,$coupon_id,$discount,$total_payment,$post_status);
   	$Resp=$stmt->execute();
      $stmt->close();
      $insert_id = mysqli_insert_id($obj->con1);
@@ -141,7 +151,7 @@ error_reporting(E_ALL);
     if($Resp)
     {
   	  setcookie("msg", "data",time()+3600,"/");
-    //  header("location:post.php");
+      header("location:post.php");
     }
     else
     {
@@ -276,17 +286,7 @@ error_reporting(E_ALL);
                           </div>
                           <div class="col mb-3">
                             <label class="form-label" for="basic-default-fullname">City</label>
-                            <select name="city" id="city" class="form-control" required>
-                              <option value="">Select City</option>
-                                    <?php    
-                                        while($city=mysqli_fetch_array($res_city)){
-                                    ?>
-                                        <option value="<?php echo $city["city_id"] ?>"><?php echo $city["city_name"] ?></option>
-                                    <?php
-                            }
-                          ?>
-                                </select>
-                                          
+                            <input type="text" name="city" id="city" required  class="form-control">
                           </div>
                           
                         </div>
@@ -304,8 +304,8 @@ error_reporting(E_ALL);
                                     ?>
                                         <option value="<?php echo $mail_type["id"] ?>"><?php echo $mail_type["mail_type"] ?></option>
                                     <?php
-                            }
-                          ?>
+                                      }
+                                    ?>
                                 </select>
                                           
                           </div>
@@ -314,6 +314,7 @@ error_reporting(E_ALL);
                           <div class="col mb-3">
                             <label class="form-label d-block" for="basic-default-fullname">Approx Weight(in grams)</label>
                             <input type="number" min="1" class="form-control" name="weight" id="weight" required onblur="get_amount(this.value)"/>
+                            <div id="weight_alert" class="text-danger"></div>
                           </div>
                           
                           <div class="col mb-3">
@@ -392,7 +393,7 @@ error_reporting(E_ALL);
                           </div>
                           <div class="col mb-3">
                             <label class="form-label d-block" for="basic-default-fullname">Delivery Charges(Rs.)</label>
-                            <input type="text" class="form-control" name="delivery_charge" id="delivery_charge" readonly value="20.00" />
+                            <input type="text" class="form-control" name="delivery_charge" id="delivery_charge" readonly value="<?php echo $delivery_charge["minimum_delivery_charge"] ?>" />
                           </div>
                         </div>
                         <div class="row g-2">
@@ -401,13 +402,6 @@ error_reporting(E_ALL);
                             <label class="form-label d-block" for="basic-default-fullname">Apply Coupon</label>
                             <select name="coupon" id="coupon" class="form-control"  onchange="get_coupon_disc(this.value)">
                               <option value="">Select Coupon</option>
-                                    <?php    
-                                        while($coupon=mysqli_fetch_array($res_coupon)){
-                                    ?>
-                                        <option value="<?php echo $coupon["c_id"] ?>"><?php echo $coupon["couponcode"]?></option>
-                                    <?php
-                            }
-                          ?>
                             </select>  
                             <div id="coupon_alert" class="text-danger"></div>
                           </div>
@@ -450,15 +444,15 @@ error_reporting(E_ALL);
                           <th>Receiver Name</th>
                           <th>Sender</th>
                           <th>Area</th> 
-                          <th>City</th>
-                          <th>Collection Address</th>
                           <th>Collection Time</th>
+                          <th>Dispatch Date</th>
+                          <th>Order Status</th>
                           <th>Action</th>
                         </tr>
                       </thead>
                       <tbody class="table-border-bottom-0">
                         <?php 
-                          $stmt_list = $obj->con1->prepare("select p1.*,a1.area_name,c1.city_name,c2.id as cust_name,c2.name as cust_name,ca.*,c4.id as coll_time_id,c4.start_time,c4.end_time  from post p1,area a1,city c1,mail_type m1,customer_address ca,customer_reg c2,collection_time c4 where ca.area_id=a1.aid and p1.city=c1.city_id  and p1.mail_type=m1.id and p1.collection_address=ca.ca_id and p1.sender_id=c2.id and p1.collection_time=c4.id  order by p1.id desc");
+                          $stmt_list = $obj->con1->prepare("select p1.*,a1.area_name,c1.id as cust_name,c1.name as cust_name,ca.*,c3.id as coll_time_id,c3.start_time,c3.end_time  from post p1,area a1,mail_type m1,customer_address ca,customer_reg c1,collection_time c3 where ca.area_id=a1.aid and p1.mail_type=m1.id and p1.collection_address=ca.ca_id and p1.sender_id=c1.id and p1.collection_time=c3.id order by p1.id desc");
                           $stmt_list->execute();
                           $result = $stmt_list->get_result();
                           
@@ -473,10 +467,10 @@ error_reporting(E_ALL);
                           <td><?php echo $post["receiver_name"]?></td>
                           <td><?php echo $post["cust_name"]?></td>
                           <td><?php echo $post["area"]?></td>
-                          <td><?php echo $post["city_name"]?></td>    
-                          <td><?php echo $post["address_label"]."-".$post["house_no"].",".$post["street"].",".$post["area_name"].",".$post["city_name"] ?></td>
                           <td><?php echo $post["start_time"]."-".$post["end_time"]?></td>
-                                       
+                          <td><?php echo $post["dispatch_date"]?></td>
+                          <td><?php echo $post["post_status"]?></td>
+
                           <td>
                           
                           	<!-- <a href="javascript:editdata('<?php echo $post["id"]?>');"><i class="bx bx-edit-alt me-1"></i> </a> -->
@@ -513,8 +507,17 @@ error_reporting(E_ALL);
           data: "uid="+sender,
           cache: false,
           success: function(result){
+            var data = result.split("@@@@@");
             $('#coll_address').html('');
-            $('#coll_address').append(result);
+            $('#coll_address').append(data[0]);
+            
+            if(data[1]==1){
+              $('#coupon_alert').html('No Coupon Code Applicable');
+            } else{
+              $('#coupon').html('');
+              $('#coupon').append(data[1]);  
+            }
+            
           }
         });
 
@@ -535,6 +538,10 @@ error_reporting(E_ALL);
             $('#basic_charge').html('');
             $('#basic_charge').val(result);
             $('#total_amt').val(total_amt);
+            $('#weight_alert').html('');
+            if(result==0){
+              $('#weight_alert').html('Weight Not Available');  
+            }
           }
         });
       get_coupon_disc(coupon);
@@ -564,6 +571,7 @@ error_reporting(E_ALL);
       var basic_charge=$('#basic_charge').val();
       var ack_charge=$('#ack_charge').val();
       var del_charge=$('#delivery_charge').val();
+      var total_del_charge=parseInt(ack_charge)+parseInt(del_charge);
       var main_total=parseInt(basic_charge)+parseInt(ack_charge)+parseInt(del_charge);
       if(val!="")
       {
@@ -573,35 +581,33 @@ error_reporting(E_ALL);
           async: true,
           type: "POST",
           url: "ajaxdata.php?action=get_coupon_disc",
-          data: "coupon_id="+val+"&total_amt="+total_amt+"&sender="+sender,
+          data: "coupon_id="+val+"&total_amt="+total_amt+"&sender="+sender+"&total_del_charge="+total_del_charge,
           cache: false,
           success: function(result){
            // var total_amt=parseInt(result)+parseInt(ack_charge)+parseInt(del_charge);
             console.log(result);
-            if (result == 1) {
-                $("#coupon").val('');
-                $('#coupon_alert').html('Invalid Coupon Code');
-                $('#total_amt').val(main_total);
-
-            } else if (result == 2) {
-                $("#coupon").val('');
-                $('#coupon_alert').html('Amount is too small');
-                $('#total_amt').val(main_total);
-            } else {
-                var data = result.split("@@@@@");
-                var tamount = parseFloat(total_amt) - parseFloat(data[1]);
-                console.log("tamount=" + parseFloat((tamount * 100) / 100).toFixed(2));
-                $('#coupon_alert').html('');
-                
-                $('#discount').val(parseFloat(data[1]).toFixed(2));
-                
-                $('#total_amt').val(parseFloat(tamount).toFixed(2));
-               
-                
-
-            }
             
-          }
+            if (result == 1) {
+                  $("#coupon").val('');
+                  $('#coupon_alert').html('Invalid Coupon Code');
+                  $('#total_amt').val(main_total);
+
+              } else if (result == 2) {
+                  $("#coupon").val('');
+                  $('#coupon_alert').html('Amount is too small');
+                  $('#total_amt').val(main_total);
+              } else {
+                  var data = result.split("@@@@@");
+                  var tamount = parseFloat(total_amt) - parseFloat(data[1]);
+                  console.log("tamount=" + parseFloat((tamount * 100) / 100).toFixed(2));
+                  $('#coupon_alert').html('');
+                  
+                  $('#discount').val(parseFloat(data[1]).toFixed(2));
+                  
+                  $('#total_amt').val(parseFloat(tamount).toFixed(2));
+              }
+            }
+           
         });
       }
       else

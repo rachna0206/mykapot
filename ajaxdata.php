@@ -142,11 +142,43 @@ if(isset($_REQUEST['action']))
 		$stmt_address->execute();
 		$res_address  = $stmt_address->get_result();
 		$stmt_address->close();
+
+
+		$stmt_coupon= $obj->con1->prepare("select *,count(*) as count from coupon c1, coupon_counter c2 where c1.c_id=c2.coupon_id and c1.status='enable' and customer_id=?");
+		$stmt_coupon->bind_param("i",$uid);
+		$stmt_coupon->execute();
+		$res_coupon  = $stmt_coupon->get_result();
+		$stmt_coupon->close();
+
 		$html='<option value="">Select Collection Address</option>';
 	      while($address=mysqli_fetch_array($res_address))
 	      {
 	      	$html.='<option value="'.$address["ca_id"].'">'.$address["address_label"].'-'.$address["house_no"].','.$address["street"].','.$address["area_name"].','.$address["city_name"].'</option>';
 	      }
+
+
+	    $html.="@@@@@";
+
+	    $coupon_result = "";
+	    $f=0;
+
+	    $coupon_result.='<option value="">Select Coupon</option>';
+	      while($coupon=mysqli_fetch_array($res_coupon))
+	      {
+	      	if($coupon["count"]>0){
+	      		if($coupon["counter"]>0){
+	      			$coupon_result.='<option value="'.$coupon["c_id"].'">'.$coupon["couponcode"].'</option>';
+	      			$f=1;
+	      		}
+	      	}
+	      }
+
+	    if($f==1){
+	    	$html.=$coupon_result;
+	    }
+	    else{
+	    	$html.=1;
+	    }
 		echo $html;	              
 	}
 	if($_REQUEST["action"]=="get_amount")
@@ -156,15 +188,14 @@ if(isset($_REQUEST['action']))
 		$weight=$_REQUEST["weight"];
 		$mail_type=$_REQUEST["mail_type"];
 		
-		$stmt_amt= $obj->con1->prepare("SELECT * FROM mail_type m1,mail_type_tariff m2 WHERE m2.mail_type=m1.id and m1.id=?");
-		$stmt_amt->bind_param("i",$mail_type);
+		$stmt_amt= $obj->con1->prepare("SELECT *,count(*) as count FROM mail_type m1,mail_type_tariff m2 WHERE m2.mail_type=m1.id and m1.id=? and gm_from<=? and gm_to>=?");
+		$stmt_amt->bind_param("idd",$mail_type,$weight,$weight);
 		$stmt_amt->execute();
 		$res_amt = $stmt_amt->get_result();
 		$stmt_amt->close();
 		while($mail_amount=mysqli_fetch_array($res_amt))
 		{
-			
-			if($weight>=$mail_amount["gm_from"] && $weight<=$mail_amount["gm_to"])
+			if($mail_amount["count"]>0)
 			{
 				$basic_charges=$mail_amount["amount"];
 			}
@@ -182,16 +213,17 @@ if(isset($_REQUEST['action']))
 		$html="";
 		$coupon_id=$_REQUEST["coupon_id"];
 		$total_amt=$_REQUEST["total_amt"];
-
+		$total_del_charge=$_REQUEST["total_del_charge"];
 
 		$stmt_coupon = $obj->con1->prepare("select * from coupon where c_id=?");
 		$stmt_coupon->bind_param("i",$coupon_id);
 		$stmt_coupon->execute();
 		$res_coupon = $stmt_coupon->get_result();
 		$stmt_coupon->close();
-
 		$row_num = mysqli_num_rows($res_coupon);
-        if ($row_num > 0) {
+
+		 
+		if ($row_num > 0) {
         	$date = date('Y-m-d');
             $p_row = mysqli_fetch_array($res_coupon);
             $start_date = $p_row['start_date'];
@@ -211,7 +243,9 @@ if(isset($_REQUEST['action']))
 
                 if ($total_amt >= $min_amount) {
 
-                    $amount_discount1 = $total_amt * $discount;
+                    // $amount_discount1 = $total_amt * $discount;
+                    // $amount_discount = $amount_discount1 / 100;
+                    $amount_discount1 = $total_del_charge * $discount;
                     $amount_discount = $amount_discount1 / 100;
 
                     if ($amount_discount < $max_discount_amount) {
@@ -227,18 +261,15 @@ if(isset($_REQUEST['action']))
                         echo $final_amount . "@@@@@" . $final_discount;
                     }
                 } else {
-                    
                     echo 2;
                 }
             } else {
-              
-                echo 1;
+              	echo 1;
             }
-        } else {
-
-           
+        } else {   
             echo 1;
         }
+        
 	}
 
 	if($_REQUEST['action']=="check_deliboy_contact")
@@ -355,6 +386,58 @@ if(isset($_REQUEST['action']))
 		$stmt->execute();
 		$res = $stmt->get_result();
 		$stmt->close();
+		if(mysqli_num_rows($res)>0){
+			$html=1;
+		}
+		else{
+			$html=0;
+		}
+
+		echo $html;
+	}
+
+	if($_REQUEST['action']=="check_coupon_name")
+	{
+		$html="";
+		$coupon_name=$_REQUEST["name"];
+		$id=$_REQUEST['id'];
+		if($id!=""){
+			$stmt_name = $obj->con1->prepare("select * from coupon where name=? and c_id!=?");
+			$stmt_name->bind_param("si",$coupon_name,$id);
+		}
+		else{	
+			$stmt_name = $obj->con1->prepare("select * from coupon where name=?");
+			$stmt_name->bind_param("s",$coupon_name);
+		}
+		$stmt_name->execute();
+		$res = $stmt_name->get_result();
+		$stmt_name->close();
+		if(mysqli_num_rows($res)>0){
+			$html=1;
+		}
+		else{
+			$html=0;
+		}
+
+		echo $html;
+	}
+
+	if($_REQUEST['action']=="check_coupon_code")
+	{
+		$html="";
+		$coupon_code=$_REQUEST["code"];
+		$id=$_REQUEST['id'];
+		if($id!=""){
+			$stmt_code = $obj->con1->prepare("select * from coupon where couponcode=? and c_id!=?");
+			$stmt_code->bind_param("si",$coupon_code,$id);
+		}
+		else{	
+			$stmt_code = $obj->con1->prepare("select * from coupon where couponcode=?");
+			$stmt_code->bind_param("s",$coupon_code);
+		}
+		$stmt_code->execute();
+		$res = $stmt_code->get_result();
+		$stmt_code->close();
 		if(mysqli_num_rows($res)>0){
 			$html=1;
 		}

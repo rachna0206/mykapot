@@ -198,12 +198,14 @@ if(isset($_COOKIE["msg"]) )
                         <input type="hidden" name="ttId" id="ttId">
                         <div class="mb-3">
                           <label class="form-label" for="basic-default-fullname">Name</label>
-                          <input type="text" class="form-control" name="name" id="name" required />
+                          <input type="text" class="form-control" name="name" id="name" onkeyup ="check_coupon_name(this.value)" required />
+                          <div id="name_alert_div" class="text-danger"></div>
                         </div>
 
                         <div class="mb-3">
                           <label class="form-label" for="basic-default-fullname">Coupon Code</label>
-                          <input type="text" class="form-control" name="code" id="code" required />
+                          <input type="text" class="form-control" name="code" id="code" onkeyup ="check_coupon_code(this.value)" required />
+                          <div id="code_alert_div" class="text-danger"></div>
                         </div>
 
                         <div class="mb-3">
@@ -273,6 +275,7 @@ if(isset($_COOKIE["msg"]) )
                     <thead>
                       <tr>
                         <th>Srno</th>
+                        <th>Coupon Name</th>
                         <th>Coupon Code</th>
                         <th>Discount</th>
                         <th>Start Date</th>
@@ -296,6 +299,7 @@ if(isset($_COOKIE["msg"]) )
                       <tr>
                         <td><?php echo $i?></td>
                         <td><?php echo $coupon["name"]?></td>
+                        <td><?php echo $coupon["couponcode"]?></td>
                         <td><?php echo $coupon["discount"]?></td>
                         <td><?php echo $coupon["s_dt"]?></td>
                         <td><?php echo $coupon["e_dt"]?></td>
@@ -326,6 +330,55 @@ if(isset($_COOKIE["msg"]) )
 
             <!-- / Content -->
 <script type="text/javascript">
+
+  function check_coupon_name(name)
+  {
+    var id=$('#ttId').val();
+    $.ajax({
+      async: true,
+      type: "POST",
+      url: "ajaxdata.php?action=check_coupon_name",
+      data: "name="+name+"&id="+id,
+      cache: false,
+      success: function(result){
+        if(result>0){
+          $('#name_alert_div').html('Name already taken');
+          document.getElementById('btnsubmit').disabled = true;
+          document.getElementById('btnupdate').disabled = true;
+        }
+        else{
+          $('#name_alert_div').html('');
+          document.getElementById('btnsubmit').disabled = false;
+          document.getElementById('btnupdate').disabled = false;
+        }
+      }
+    });
+  }
+
+  function check_coupon_code(code)
+  {
+    var id=$('#ttId').val();
+    $.ajax({
+      async: true,
+      type: "POST",
+      url: "ajaxdata.php?action=check_coupon_code",
+      data: "code="+code+"&id="+id,
+      cache: false,
+      success: function(result){
+        if(result>0){
+          $('#code_alert_div').html('Coupon Code already taken');
+          document.getElementById('btnsubmit').disabled = true;
+          document.getElementById('btnupdate').disabled = true;
+        }
+        else{
+          $('#code_alert_div').html('');
+          document.getElementById('btnsubmit').disabled = false;
+          document.getElementById('btnupdate').disabled = false;
+        }
+      }
+    });
+  }
+
   function deletedata(id) {
 
       if(confirm("Are you sure to DELETE data?")) {

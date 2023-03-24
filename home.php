@@ -2,6 +2,7 @@
 include("header.php");
 
 $date=isset($_COOKIE["dash_date"])?$_COOKIE['dash_date']:date('Y-m-d');
+setcookie("selected_date", $date,time()+3600,"/");
 
 // total customers
 $stmt_list1 = $obj->con1->prepare("select * from customer_reg where `status`='enable'");
@@ -30,7 +31,7 @@ $stmt_list4->close();
 // today's new delivery boy
 $stmt_list5 = $obj->con1->prepare("select * from delivery_boy where status='enable' and dt like '%".$date."%'");
 $stmt_list5->execute();
-$todays_deli_boy = $stmt_list5->get_result()->num_rows;	
+$todays_deli_boy = $stmt_list5->get_result()->num_rows;
 $stmt_list5->close();
 
 // upcoming post
@@ -112,7 +113,7 @@ $stmt_list7->close();
                     <i class="bx bx-dots-vertical-rounded"></i>
                   </button>
                   <div class="dropdown-menu" aria-labelledby="cardOpt1">
-                    <a class="dropdown-item" href="#">View More</a>
+                    <a class="dropdown-item" href="customer_report.php?typ=today">View More</a>
                     
                   </div>
                 </div>
@@ -143,7 +144,7 @@ $stmt_list7->close();
                     <i class="bx bx-dots-vertical-rounded"></i>
                   </button>
                   <div class="dropdown-menu" aria-labelledby="cardOpt1">
-                    <a class="dropdown-item" href="#">View More</a>
+                    <a class="dropdown-item" href="customer_report.php?typ=upcoming">View More</a>
                     
                   </div>
                 </div>
@@ -205,7 +206,7 @@ $stmt_list7->close();
                     <i class="bx bx-dots-vertical-rounded"></i>
                   </button>
                   <div class="dropdown-menu" aria-labelledby="cardOpt1">
-                    <a class="dropdown-item" href="#">View More</a>
+                    <a class="dropdown-item" href="customer_report.php?typ=today_dispatch">View More</a>
                     
                   </div>
                 </div>
@@ -235,7 +236,7 @@ $stmt_list7->close();
                     <i class="bx bx-dots-vertical-rounded"></i>
                   </button>
                   <div class="dropdown-menu dropdown-menu-end" aria-labelledby="cardOpt3">
-                    <a class="dropdown-item" href="#">View More</a>
+                    <a class="dropdown-item" href="cust_report.php?typ=total">View More</a>
                     
                   </div>
                 </div>
@@ -259,7 +260,7 @@ $stmt_list7->close();
                     <i class="bx bx-dots-vertical-rounded"></i>
                   </button>
                   <div class="dropdown-menu dropdown-menu-end" aria-labelledby="cardOpt4">
-                    <a class="dropdown-item" href="#">View More</a>
+                    <a class="dropdown-item" href="cust_report.php?typ=today">View More</a>
                     
                   </div>
                 </div>
@@ -290,7 +291,7 @@ $stmt_list7->close();
                     <i class="bx bx-dots-vertical-rounded"></i>
                   </button>
                   <div class="dropdown-menu" aria-labelledby="cardOpt1">
-                    <a class="dropdown-item" href="#">View More</a>
+                    <a class="dropdown-item" href="delivery_boy_report.php?typ=total">View More</a>
                     
                   </div>
                 </div>
@@ -321,7 +322,7 @@ $stmt_list7->close();
                     <i class="bx bx-dots-vertical-rounded"></i>
                   </button>
                   <div class="dropdown-menu" aria-labelledby="cardOpt1">
-                    <a class="dropdown-item" href="#">View More</a>
+                    <a class="dropdown-item" href="delivery_boy_report.php?typ=today">View More</a>
                     
                   </div>
                 </div>

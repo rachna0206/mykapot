@@ -260,6 +260,48 @@ public function update_order_status($pid,$status,$payment_status)
     $stmt->close();
     return $affected;
 }
+
+//  post data
+public function post_data($post_id)
+{
+
+    
+    $stmt = $this->con->prepare("select * from post where id=?");
+    $stmt->bind_param("i", $post_id);
+    $stmt->execute();
+    $post_data = $stmt->get_result()->fetch_assoc();
+    $stmt->close();
+    return $post_data;
+   
+
+}
+
+//  get amount 
+public function get_amount($weight,$mail_type)
+{
+
+    //echo "SELECT * FROM mail_type m1,mail_type_tariff m2 WHERE m2.mail_type=m1.id and m1.id=1";
+    $stmt = $this->con->prepare("SELECT * FROM mail_type m1,mail_type_tariff m2 WHERE m2.mail_type=m1.id and m1.id=?");
+    $stmt->bind_param("i", $mail_type);
+    $stmt->execute();
+    $post_data = $stmt->get_result();
+    $stmt->close();
+    while($mail_amount=mysqli_fetch_array($post_data))
+    {
+        
+        if($weight>=$mail_amount["gm_from"] && $weight<=$mail_amount["gm_to"])
+        {
+            $basic_charges=$mail_amount["amount"];
+        }
+        else
+        {
+            $basic_charges=0;
+        }
+    }
+    return $basic_charges;
+   
+
+}
     //---------------------------------------//
 
     // insert delivery boy availability
@@ -471,6 +513,21 @@ public function update_order_status($pid,$status,$payment_status)
             return 0;
         }
 
+    }
+
+     // add lcoation
+     public function update_weight($post_id,$weight,$basic_charges,$total_charges)
+    {
+       
+         
+        $stmt = $this->con->prepare("UPDATE `post` SET `weight`=?,basic_charges=?,total_payment=?,total_charges=? where id=?");
+        $stmt->bind_param("dsssi",  $weight,$basic_charges,$total_charges,$total_charges,$post_id);
+       
+        $result = $stmt->execute();
+        $affected=$stmt->affected_rows;
+        $stmt->close();
+        
+        return $affected;
     }
 
     // order list

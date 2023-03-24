@@ -2,42 +2,48 @@
 include("header.php");
 error_reporting(E_ALL);
 
-
-/*$stmt_slist = $obj->con1->prepare("select * from state where status='enable'");
-$stmt_slist->execute();
-$res = $stmt_slist->get_result();
-$stmt_slist->close();
-
-$stmt_batch = $obj->con1->prepare("select * from batch");
-$stmt_batch->execute();
-$res_batch = $stmt_batch->get_result();
-$stmt_batch->close();
-
-$stmt_course = $obj->con1->prepare("select * from course");
-$stmt_course->execute();
-$res_course = $stmt_course->get_result();
-$stmt_course->close();*/
-
-
 // insert data
 if(isset($_REQUEST['btnsubmit']))
 {
   
   $name=isset($_REQUEST['name'])?$_REQUEST['name']:"";
   $contact=isset($_REQUEST['contact'])?$_REQUEST['contact']:"";
+  $order_dt=isset($_REQUEST['order_dt'])?$_REQUEST['order_dt']:"";
   $dispatch_dt=isset($_REQUEST['dispatch_dt'])?$_REQUEST['dispatch_dt']:"";
   
 
   
   $name_str=($name!="")?"and c1.name like '%".$name."%'":"";
   $contact_str=($contact!="")?"and c1.contact like '%".$contact."%'":"";
- 
+  $order_dt_str=($order_dt!="")?"and p1.order_date like '%".$order_dt."%'":"";
   $dispatch_dt_str=($dispatch_dt!="")?"and p1.dispatch_date='".$dispatch_dt."'":"";
   
-  $stmt_list = $obj->con1->prepare("SELECT p1.*,c1.*,m1.mail_type as mail_type_name from customer_reg c1,post p1,mail_type m1 where p1.sender_id=c1.id and p1.mail_type=m1.id ".$name_str.$contact_str.$dispatch_dt_str);
+  $stmt_list = $obj->con1->prepare("SELECT p1.*,c1.*,m1.mail_type as mail_type_name,p1.id as post_id from customer_reg c1,post p1,mail_type m1 where p1.sender_id=c1.id and p1.mail_type=m1.id ".$name_str.$contact_str.$order_dt_str.$dispatch_dt_str);
   $stmt_list->execute();
   $result = $stmt_list->get_result();
   
+  $stmt_list->close();
+
+}
+else if(isset($_REQUEST["typ"]))
+{
+  if($_REQUEST['typ']=="today")
+  {
+    $order_dt=$_COOKIE['selected_date'];
+    $stmt_list = $obj->con1->prepare("SELECT p1.*,c1.*,m1.mail_type as mail_type_name,p1.id as post_id from customer_reg c1,post p1,mail_type m1 where p1.sender_id=c1.id and p1.mail_type=m1.id and p1.order_date='".$order_dt."' ");
+  }
+  else if($_REQUEST['typ']=="upcoming")
+  {
+    $stmt_list = $obj->con1->prepare("SELECT p1.*,c1.*,m1.mail_type as mail_type_name,p1.id as post_id from customer_reg c1,post p1,mail_type m1 where p1.sender_id=c1.id and p1.mail_type=m1.id and cast(p1.dispatch_date as date)>'".date('Y-m-d')."' ");
+  }
+  else if($_REQUEST['typ']=="today_dispatch")
+  {
+    $dispatch_dt=$_COOKIE['selected_date'];
+    $stmt_list = $obj->con1->prepare("SELECT p1.*,c1.*,m1.mail_type as mail_type_name,p1.id as post_id from customer_reg c1,post p1,mail_type m1 where p1.sender_id=c1.id and p1.mail_type=m1.id and p1.dispatch_date='".$dispatch_dt."' ");
+  }
+  
+  $stmt_list->execute();
+  $result = $stmt_list->get_result(); 
   $stmt_list->close();
 
 }
@@ -71,12 +77,14 @@ if(isset($_REQUEST['btnsubmit']))
             </div>
             
             <div class="mb-3 col-md-3">
-              <label class="form-label" for="basic-default-fullname">Dispatch Date</label>
-              <input type="date" class="form-control" name="dispatch_dt" id="dispatch_dt"  value=""/>
-              
+              <label class="form-label" for="basic-default-fullname">Order Date</label>
+              <input type="date" class="form-control" name="order_dt" id="order_dt"  value="<?php echo isset($order_dt)?$order_dt:"" ?>"/>
             </div>
             
-            
+            <div class="mb-3 col-md-3">
+              <label class="form-label" for="basic-default-fullname">Dispatch Date</label>
+              <input type="date" class="form-control" name="dispatch_dt" id="dispatch_dt"  value="<?php echo isset($dispatch_dt)?$dispatch_dt:"" ?>"/>
+            </div>
             
            
           </div>
@@ -115,20 +123,18 @@ if(isset($_REQUEST['btnsubmit']))
                     </thead>
                     <tbody class="table-border-bottom-0" id="grid">
                       <?php 
-                     if(isset($_REQUEST['btnsubmit']) )
+                     if(isset($_REQUEST['btnsubmit']) || isset($_REQUEST["typ"]))
                       {
                       
                         $i=1;
                         while($row=mysqli_fetch_array($result))
                         {
-                          
-                          
                           ?>
 
                       <tr>
                         <td><?php echo $i?></td>
                         
-                        <td><?php echo $row["name"]?></td>
+                        <td><?php echo $row["name"]?>-<?php echo $row["post_id"]?></td>
                         
                         <td><?php echo $row["contact"]?></td>
                         <td><?php echo $row["receiver_name"]?></td>
@@ -140,7 +146,7 @@ if(isset($_REQUEST['btnsubmit']))
                         <td><?php echo $row["priority"]?></td>
                         <td><?php echo $row["dispatch_date"]?></td>
 
-                        <td ><a href="#">View</a></td>
+                        <td ><a href="javascript:view_post_data('<?php echo $row["post_id"]?>')">View</a></td>
                         
                     
                           
@@ -163,6 +169,13 @@ if(isset($_REQUEST['btnsubmit']))
 
               <!--/ Basic Bootstrap Table -->
 
+<script type="text/javascript">
+  function view_post_data(pid)
+  {
+    createCookie("post_id",pid,1);
+    window.open('customer_report_detail.php', '_blank');
+  }
+</script>
 
 <?php 
 	include("footer.php");

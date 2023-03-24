@@ -670,7 +670,7 @@ $app->post('/get_job_detail', function () use ($app) {
     verifyRequiredParams(array('data'));
     $data = json_decode($app->request->post('data'));
     $job_id = $data->job_id;
-   // $grams=isset($data->grams)?$data->grams:"";
+   
 
     $db = new DbOperation();
     $data = array();
@@ -701,9 +701,66 @@ $app->post('/get_job_detail', function () use ($app) {
 });
 
 
+/*
+*name:update weight
+*param:deliveryboy_id
+method:post
+*/
+$app->post('/update_weight', function () use ($app) {
+
+    verifyRequiredParams(array('data'));
+    $data = json_decode($app->request->post('data'));
+    $post_id = $data->post_id;
+    $weight=isset($data->weight)?$data->weight:"";
+
+    $db = new DbOperation();
+    $data = array();
+    $data["data"] = array();
+    $response = array();
+    $temp=array();
+    
+
+
+    // get details from post
+    $post_data=$db->post_data($post_id);
+    $ack_charges=$post_data["ack_charges"];
+    $delivery_charge=$post_data["delivery_charge"];
+    $discount=($post_data["discount"]!="")?$post_data["discount"]:0;
+    $mail_type=$post_data["mail_type"];
+     // calculate charges
+   $get_amount=$db->get_amount($weight,$mail_type);
+   if($get_amount>0)
+   {
+        $basic_charges=$get_amount;
+        $total_charges=($delivery_charge+$ack_charges+$basic_charges)-$discount;
+        // update post grams & charges
+        $jobdata = $db->update_weight($post_id,$weight,$basic_charges,$total_charges);
+        
+        if ($jobdata>0) {
+            $data['result'] = true;
+            $data['message'] = "";
+            $temp['total_charges']=$total_charges;
+            $data['data']=$temp;
+            
+        } else {
+            $data['result'] = false;
+            $data['message'] = "Weight already updated";
+        }
+   }
+   else
+   {
+        $data['result'] = false;
+        $data['message'] = "Weight not available";
+   }
+    
+
+    echoResponse(200, $data);
+});
+
+
 
 /*
-URL: https://pragmanxt.com/pragma_demo_multivendor/Mobile_Services/delivery/v1/logout
+
  * logout
  * Parameters:id,tokenid
  * Method: post

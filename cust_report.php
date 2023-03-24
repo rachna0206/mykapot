@@ -6,7 +6,6 @@ error_reporting(E_ALL);
 // insert data
 if(isset($_REQUEST['btnsubmit']))
 {
-  
   $name=isset($_REQUEST['name'])?$_REQUEST['name']:"";
   $contact=isset($_REQUEST['contact'])?$_REQUEST['contact']:"";
   $email=isset($_REQUEST['email'])?$_REQUEST['email']:"";
@@ -20,7 +19,21 @@ if(isset($_REQUEST['btnsubmit']))
   $result = $stmt_list->get_result();
   
   $stmt_list->close();
-
+}
+else if(isset($_REQUEST["typ"]))
+{
+  if($_REQUEST['typ']=="today")
+  {
+    $dt = $_COOKIE['selected_date'];
+    $stmt_list = $obj->con1->prepare("SELECT * from customer_reg c1 where dt like '%".$dt."%' ");
+  }
+  else if($_REQUEST['typ']=="total")
+  {
+    $stmt_list = $obj->con1->prepare("SELECT * from customer_reg c1");
+  }
+  $stmt_list->execute();
+  $result = $stmt_list->get_result(); 
+  $stmt_list->close();
 }
 
 ?>
@@ -81,7 +94,7 @@ if(isset($_REQUEST['btnsubmit']))
                     </thead>
                     <tbody class="table-border-bottom-0" id="grid">
                       <?php 
-                     if(isset($_REQUEST['btnsubmit']) )
+                     if(isset($_REQUEST['btnsubmit']) || isset($_REQUEST["typ"]))
                       {                     
                         $i=1;
                         while($row=mysqli_fetch_array($result))

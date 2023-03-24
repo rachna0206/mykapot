@@ -26,7 +26,21 @@ if(isset($_REQUEST['btnsubmit']))
   $stmt_list->execute();
   $result = $stmt_list->get_result();
   $stmt_list->close();
-
+}
+else if(isset($_REQUEST["typ"]))
+{
+  if($_REQUEST['typ']=="today")
+  {
+    $dt = $_COOKIE['selected_date'];
+    $stmt_list = $obj->con1->prepare("select  db.*,c1.city_name,z1.zone_name from delivery_boy db,city c1,zone z1 where db.city=c1.city_id and db.zone_id=z1.zid and db.dt like '%".$dt."%' ");
+  }
+  else if($_REQUEST['typ']=="total")
+  {
+    $stmt_list = $obj->con1->prepare("select  db.*,c1.city_name,z1.zone_name from delivery_boy db,city c1,zone z1 where db.city=c1.city_id and db.zone_id=z1.zid");
+  }
+  $stmt_list->execute();
+  $result = $stmt_list->get_result(); 
+  $stmt_list->close();
 }
 
 ?>
@@ -103,7 +117,7 @@ if(isset($_REQUEST['btnsubmit']))
                     </thead>
                     <tbody class="table-border-bottom-0" id="grid">
                       <?php 
-                     if(isset($_REQUEST['btnsubmit']) )
+                     if(isset($_REQUEST['btnsubmit']) || isset($_REQUEST["typ"]))
                       {                     
                         $i=1;
                         while($row=mysqli_fetch_array($result))
