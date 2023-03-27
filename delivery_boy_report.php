@@ -131,7 +131,7 @@ else if(isset($_REQUEST["typ"]))
                         <td><?php echo $row["email"]?></td>
                         <td><?php echo $row["city_name"]?></td>
                         <td><?php echo $row["zone_name"]?></td>
-                        <td ><a href="#">View</a></td>                          
+                        <td ><a href="javascript:view_deli_boy_data('<?php echo $row["db_id"]?>')">View</a></td>                          
                     <?php 
                     $i++;
                   } ?>
@@ -149,7 +149,16 @@ else if(isset($_REQUEST["typ"]))
 
               <!--/ Basic Bootstrap Table -->
 
+<script type="text/javascript">
+  function view_deli_boy_data(did)
+  {
+    createCookie("deli_boy_id",did,1);
+    window.open('deliveryboy_report_detail.php', '_blank');
+  }
+</script>
 
 <?php 
+  
+
 	include("footer.php");
 ?>

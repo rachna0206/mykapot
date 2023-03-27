@@ -30,7 +30,7 @@ else if(isset($_REQUEST["typ"]))
   if($_REQUEST['typ']=="today")
   {
     $order_dt=$_COOKIE['selected_date'];
-    $stmt_list = $obj->con1->prepare("SELECT p1.*,c1.*,m1.mail_type as mail_type_name,p1.id as post_id from customer_reg c1,post p1,mail_type m1 where p1.sender_id=c1.id and p1.mail_type=m1.id and p1.order_date='".$order_dt."' ");
+    $stmt_list = $obj->con1->prepare("SELECT p1.*,c1.*,m1.mail_type as mail_type_name,p1.id as post_id from customer_reg c1,post p1,mail_type m1 where p1.sender_id=c1.id and p1.mail_type=m1.id and p1.order_date like '%".$order_dt."%'");
   }
   else if($_REQUEST['typ']=="upcoming")
   {
@@ -134,7 +134,7 @@ else if(isset($_REQUEST["typ"]))
                       <tr>
                         <td><?php echo $i?></td>
                         
-                        <td><?php echo $row["name"]?>-<?php echo $row["post_id"]?></td>
+                        <td><?php echo $row["name"]?></td>
                         
                         <td><?php echo $row["contact"]?></td>
                         <td><?php echo $row["receiver_name"]?></td>

@@ -119,17 +119,13 @@ error_reporting(E_ALL);
 
     }
 
-
-     
-
      if($coupon_id!="")
      {
-      /*//decrease coustomer coupon count
-        $stmt_list = $obj->con1->prepare("update coupon_counter set `counter`=? where sr_no=?");
-        $stmt_list->bind_param("ii",$counter,$p_row["sr_no"]);
-        $stmt_list->execute();
-          
-        $stmt_list->close();*/
+      //decrease coustomer coupon count
+      $stmt_coupon = $obj->con1->prepare("update coupon_counter set counter=counter-1 where customer_id=? and coupon_id=?");
+      $stmt_coupon->bind_param("ii",$sender,$coupon_id);
+      $Resp_coupon=$stmt_coupon->execute();
+      $stmt_coupon->close();
      }
      
     //insert into notification
@@ -159,6 +155,36 @@ error_reporting(E_ALL);
         header("location:post.php");
     }
   }
+
+  // delete data
+if(isset($_REQUEST["flg"]) && $_REQUEST["flg"]=="del")
+{
+  try
+  {
+    $stmt_del = $obj->con1->prepare("delete from post where id='".$_REQUEST["n_id"]."'");
+    $Resp=$stmt_del->execute();
+    if(!$Resp)
+    {
+      throw new Exception("Problem in deleting! ". strtok($obj->con1-> error,  '('));
+    }
+    $stmt_del->close();
+  } 
+  catch(\Exception  $e) {
+    setcookie("sql_error", urlencode($e->getMessage()),time()+3600,"/");
+  }
+
+
+  if($Resp)
+  {
+  setcookie("msg", "data_del",time()+3600,"/");
+    header("location:post.php");
+  }
+  else
+  {
+  setcookie("msg", "fail",time()+3600,"/");
+    header("location:post.php");
+  }
+}
 
  
   ?>
@@ -499,6 +525,13 @@ error_reporting(E_ALL);
 
               <!-- / Content -->
   <script type="text/javascript">
+
+    function view_post_data(pid)
+    {
+      createCookie("post_id",pid,1);
+      window.open('customer_report_detail.php', '_blank');
+    }
+
     function get_address(sender){
       $.ajax({
           async: true,
@@ -513,9 +546,13 @@ error_reporting(E_ALL);
             
             if(data[1]==1){
               $('#coupon_alert').html('No Coupon Code Applicable');
+              var coupon_data='<option value="">Select Coupon</option>';
+              $('#coupon').html('');
+              $('#coupon').append(coupon_data);
             } else{
               $('#coupon').html('');
-              $('#coupon').append(data[1]);  
+              $('#coupon').append(data[1]);
+              $('#coupon_alert').html('');
             }
             
           }

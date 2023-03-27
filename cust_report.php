@@ -106,7 +106,7 @@ else if(isset($_REQUEST["typ"]))
                         <td><?php echo $row["name"]?></td>
                         <td><?php echo $row["contact"]?></td>
                         <td><?php echo $row["email"]?></td>
-                        <td ><a href="#">View</a></td>                          
+                        <td ><a href="javascript:view_cust_data('<?php echo $row["id"]?>')">View</a></td>
                     <?php 
                     $i++;
                   } ?>
@@ -123,6 +123,14 @@ else if(isset($_REQUEST["typ"]))
               </div>
 
               <!--/ Basic Bootstrap Table -->
+
+<script type="text/javascript">
+  function view_cust_data(cid)
+  {
+    createCookie("cust_id",cid,1);
+    window.open('cust_report_detail.php', '_blank');
+  }
+</script>
 
 
 <?php 
