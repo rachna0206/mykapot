@@ -3,7 +3,7 @@
 include ("db_connect.php");
 $obj=new DB_connect();
 date_default_timezone_set("Asia/Kolkata");
-error_reporting(E_ALL);
+//error_reporting(E_ALL);
 
 session_start();
 
@@ -12,7 +12,6 @@ if(!isset($_SESSION["userlogin"]) )
 {
     header("location:index.php");
 }
-
 
 
 $adminmenu=array("customer_reg.php","collection_time.php","delivery_settings.php","coupon.php","state.php","city.php","zone.php","area.php","post.php","mail_type.php","mail_type_tariff.php","deliveryboy_reg.php","coupon_counter.php");
@@ -175,6 +174,22 @@ $reportmenu=array("customer_report.php");
             {
 
               window.location = "customer_reg.php";
+            }
+            else if(typ=="delivery_reg")
+            {
+              window.location = "deliveryboy_reg.php";
+            }
+            else if(typ=="post_accepted")
+            {
+              window.location = "post.php";
+            }
+            else if(typ=="post_dispatched")
+            {
+              window.location = "post.php";
+            }
+            else if(typ=="post_rejected")
+            {
+              window.location = "post.php";
             }
             else
             {
@@ -372,6 +387,11 @@ $reportmenu=array("customer_report.php");
                 <div data-i18n="course">Customer Feedback</div>
                 </a>
               </li>
+              <li class="menu-item <?php echo basename($_SERVER["PHP_SELF"])=="send_notification.php"?"active":"" ?>">
+                  <a href="send_notification.php" class="menu-link">
+                  <div data-i18n="course">Send Notifications</div>
+                  </a>
+                </li>
 
               </ul>
             </li>
@@ -401,6 +421,8 @@ $reportmenu=array("customer_report.php");
                   <div data-i18n="course">Delivery Boy Report</div>
                   </a>
                 </li>
+
+                
                 
 
               </ul>

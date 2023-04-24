@@ -22,7 +22,7 @@ if(isset($_REQUEST['btnsubmit']))
   $email_str=($email!="")?"and db.email like '%".$email."%'":"";
   $zone_str=($zone!="")?"and db.zone_id='".$zone."'":"";
   
-  $stmt_list = $obj->con1->prepare("select  db.*,c1.city_name,z1.zone_name from delivery_boy db,city c1,zone z1 where db.city=c1.city_id and db.zone_id=z1.zid ".$name_str.$contact_str.$email_str.$zone_str);
+  $stmt_list = $obj->con1->prepare("select  db.*,c1.city_name,z1.zone_name from delivery_boy db,city c1,zone z1 where db.city=c1.city_id and db.zone_id=z1.zid ".$name_str.$contact_str.$email_str.$zone_str." order by db.db_id desc");
   $stmt_list->execute();
   $result = $stmt_list->get_result();
   $stmt_list->close();
@@ -32,11 +32,11 @@ else if(isset($_REQUEST["typ"]))
   if($_REQUEST['typ']=="today")
   {
     $dt = $_COOKIE['selected_date'];
-    $stmt_list = $obj->con1->prepare("select  db.*,c1.city_name,z1.zone_name from delivery_boy db,city c1,zone z1 where db.city=c1.city_id and db.zone_id=z1.zid and db.dt like '%".$dt."%' ");
+    $stmt_list = $obj->con1->prepare("select  db.*,c1.city_name,z1.zone_name from delivery_boy db,city c1,zone z1 where db.city=c1.city_id and db.zone_id=z1.zid and db.dt like '%".$dt."%' "." order by db.db_id desc");
   }
   else if($_REQUEST['typ']=="total")
   {
-    $stmt_list = $obj->con1->prepare("select  db.*,c1.city_name,z1.zone_name from delivery_boy db,city c1,zone z1 where db.city=c1.city_id and db.zone_id=z1.zid");
+    $stmt_list = $obj->con1->prepare("select  db.*,c1.city_name,z1.zone_name from delivery_boy db,city c1,zone z1 where db.city=c1.city_id and db.zone_id=z1.zid order by db.db_id");
   }
   $stmt_list->execute();
   $result = $stmt_list->get_result(); 
@@ -109,8 +109,8 @@ else if(isset($_REQUEST["typ"]))
                         <th>Name</th>
                         <th>Contact No.</th>
                         <th>Email</th>
-                        <th>City</th>
                         <th>Zone</th>
+                        <th>Pincode</th>
                         <th>Action</th>
                         
                       </tr>
@@ -129,8 +129,8 @@ else if(isset($_REQUEST["typ"]))
                         <td><?php echo $row["name"]?></td>
                         <td><?php echo $row["contact"]?></td>
                         <td><?php echo $row["email"]?></td>
-                        <td><?php echo $row["city_name"]?></td>
                         <td><?php echo $row["zone_name"]?></td>
+                        <td><?php echo $row["pincode"]?></td>
                         <td ><a href="javascript:view_deli_boy_data('<?php echo $row["db_id"]?>')">View</a></td>                          
                     <?php 
                     $i++;

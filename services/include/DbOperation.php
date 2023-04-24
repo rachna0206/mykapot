@@ -10,6 +10,171 @@ class DbOperation
         $db = new DbConnect();
         $this->con = $db->connect();
     }
+    
+ // get coupon list customerwise ( by Jay 14-4-23)    
+public function coupon_list1($sender_id)
+{
+    $stmt = $this->con->prepare("(select c1.c_id,c1.couponcode,c1.discount from coupon_counter cc1, coupon c1 where cc1.coupon_id=c1.c_id and c1.status='enable' and cc1.counter>0 and cc1.customer_id=? and curdate()>=start_date and curdate()<=end_date and c1.type='specific') union (select c_id,couponcode,discount from coupon where status='enable' and curdate()>=start_date and curdate()<=end_date and type='generic')");
+    $stmt->bind_param("i",$sender_id);
+    $stmt->execute();
+    $result = $stmt->get_result();
+    $stmt->close();
+    return $result;
+}
+
+    
+    
+    
+    // customer address add ( by Jay 4-4-23)
+public function add_customer_address($cust_id,$address_label,$house_no,$street,$area_id,$city_id,$pincode,$action)
+{
+
+               $stmt = $this->con->prepare("INSERT INTO `customer_address` (`cust_id`, `address_label`, `house_no`, `street`,`area_id`,`city_id`,`pincode`,`action`) VALUES(?,?,?,?,?,?,?,?)");
+            $stmt->bind_param("isssiiss", $cust_id,$address_label,$house_no,$street,$area_id,$city_id,$pincode,$action);
+           
+            $result = $stmt->execute();
+            $lastId=mysqli_insert_id($this->con);
+            $stmt->close();
+            
+            if ($result) {
+
+                return $lastId;
+            } else {
+                return 0;
+            }
+ }
+ 
+ 
+ // get collection_time added by nidhi
+public function get_collection_time($collection_date)
+{
+    $todays_date =  date('Y-m-d');
+    $current_time = date('H:i');
+
+    if($collection_date==$todays_date){
+        
+      $stmt = $this->con->prepare("select id,time_format(start_time,'%h:%i %p') as start_time ,time_format(end_time,'%h:%i %p') as end_time from collection_time where status='enable' and start_time>=?");
+      $stmt->bind_param("s",$current_time);
+      $stmt->execute();
+      $result = $stmt->get_result();
+     $stmt->close();
+    } else if($collection_date>$todays_date){
+      
+      $stmt = $this->con->prepare("select id,time_format(start_time,'%h:%i %p') as start_time ,time_format(end_time,'%h:%i %p') as end_time from collection_time where status='enable'");
+      $stmt->execute();
+      $result = $stmt->get_result();
+      $stmt->close();
+    }
+    //$stmt->close();
+    return $result;
+}
+ 
+
+// get all post order customerwise (by Jay 8-4-2023)
+ public function get_all_order_customerwise($cid)
+{
+    $stmt = $this->con->prepare("SELECT * FROM `post` WHERE sender_id=?");
+    $stmt->bind_param("i", $cid);
+    $stmt->execute();
+    $orders = $stmt->get_result();
+    $stmt->close();
+    return $orders;
+}
+
+
+
+//update customer profile ( by Jay 4-4-23)
+public function update_customer_profile($name,$password,$action,$id)
+{
+
+ $stmt = $this->con->prepare("UPDATE `customer_reg` SET `name`=?,`password`=?,`action`=? where `id`=?");
+          $stmt->bind_param("sssi", $name,$password,$action,$id);
+           
+            $result = $stmt->execute();
+           
+            $stmt->close();
+            
+            if ($result) {
+
+                return $id;
+            } else {
+                return 0;
+            }
+ }
+
+// Cancel post order (by jay 8/4/2023)
+public function cancel_post_order($pid,$action)
+{
+	// $action will be used later -> no column found in table.
+	 $stmt = $this->con->prepare("update post set post_status='canceled_user' where post_status='pending' and id=?");
+          $stmt->bind_param("i",$pid);
+           
+            $result = $stmt->execute();
+            $num_rows_aff = mysqli_affected_rows($this->con);
+            $stmt->close();
+            
+            if ($result) {
+
+                return $num_rows_aff;
+            } else {
+                return -1;
+            }
+}
+    
+ // get post order details  (by Jay 8-4-2023)
+public function get_post_order_details($pid)
+{
+   $stmt= $this->con->prepare("SELECT post_status FROM `post` WHERE id=?");
+	
+	$stmt->bind_param("i", $pid);
+    $stmt->execute();
+    $resultset = $stmt->get_result();
+    $stmt->close();
+   
+    $row=mysqli_fetch_array($resultset);
+	
+	if($row["post_status"]=='accept')
+	{
+	      $stmt1 = $this->con->prepare("SELECT p1.collection_date,p1.receiver_name,p1.order_date,d1.profile_pic, p1.weight, p1.priority, ca1.address_label as collection_address, concat(time_format(ct1.start_time, '%h:%i %p'),' - ', time_format(ct1.end_time, '%h:%i %p')) as collection_time, p1.total_payment, p1.dispatch_date, d1.name, d1.contact, p1.post_status, '' as trackid FROM post p1, delivery_boy d1 , job_assign j1, customer_address ca1, collection_time ct1 where p1.id = j1.post_id and j1.delivery_boy_id = d1.db_id and ca1.ca_id = p1.collection_address and ct1.id = p1.collection_time and p1.id=?"); 
+  
+    $stmt1->bind_param("i", $pid);
+    $stmt1->execute();
+    $orders = $stmt1->get_result();
+    $stmt1->close();
+	}
+	else if($row["post_status"]=='transit')
+	{
+	     $stmt1 = $this->con->prepare("SELECT  p1.collection_date,p1.receiver_name,p1.order_date,d1.profile_pic, p1.weight, p1.priority,ca1.address_label as collection_address,concat(time_format(ct1.start_time, '%h:%i %p'),' - ', time_format(ct1.end_time, '%h:%i %p')) as collection_time, p1.total_payment, p1.dispatch_date, d1.name, d1.contact, p1.post_status, d2.image as trackid FROM post p1, delivery_boy d1 , delivery_images d2 , job_assign j1, customer_address ca1, collection_time ct1 where p1.id = j1.post_id and j1.delivery_boy_id = d1.db_id and j1.id = d2.job_id and ca1.ca_id = p1.collection_address and ct1.id = p1.collection_time and d2.status='barcode' and p1.id=?");
+         $stmt1->bind_param("i", $pid);
+         $stmt1->execute();
+        $orders = $stmt1->get_result();
+        $stmt1->close();
+	}
+	else if($row["post_status"]=='dispatched')
+	{
+	     $stmt1 = $this->con->prepare("SELECT  p1.collection_date,p1.receiver_name,p1.order_date,d1.profile_pic, p1.weight, p1.priority,ca1.address_label as collection_address,concat(time_format(ct1.start_time, '%h:%i %p'),' - ', time_format(ct1.end_time, '%h:%i %p')) as collection_time, p1.total_payment, p1.dispatch_date, d1.name, d1.contact, p1.post_status, d2.image as trackid FROM post p1, delivery_boy d1 , delivery_images d2 , job_assign j1, customer_address ca1, collection_time ct1 where p1.id = j1.post_id and j1.delivery_boy_id = d1.db_id and j1.id = d2.job_id and ca1.ca_id = p1.collection_address and ct1.id = p1.collection_time and d2.status='barcode' and p1.id=?");
+         $stmt1->bind_param("i", $pid);
+         $stmt1->execute();
+        $orders = $stmt1->get_result();
+        $stmt1->close();
+	}
+    else
+	{
+	 $stmt1 = $this->con->prepare("SELECT  p1.collection_date,p1.receiver_name,p1.order_date,'' as profile_pic, p1.weight, p1.priority,ca1.address_label as collection_address, concat(time_format(ct1.start_time, '%h:%i %p'),' - ', time_format(ct1.end_time, '%h:%i %p')) as collection_time,  p1.total_payment, p1.dispatch_date, '' as name, '' as contact, p1.post_status, '' as trackid FROM post p1, customer_address ca1, collection_time ct1 where ca1.ca_id = p1.collection_address and ct1.id = p1.collection_time and p1.id=?");
+    $stmt1->bind_param("i", $pid);
+    $stmt1->execute();
+    $orders = $stmt1->get_result();
+    $stmt1->close();
+	
+		
+	}
+	
+	
+    return $orders;
+}
+   
+    
+    
 
 
 // customer registration
@@ -47,25 +212,131 @@ public function customer_reg($name,$email,$password,$contact,$status,$action)
     }
 }
 
-// add post
-public function add_post($receiver_name,$sender,$house,$street,$area,$city,$pincode,$mail_type,$weight,$ack,$priority,$coll_address,$coll_time,$dispatch_date,$basic_charge,$delivery_charge,$ack_charges,$total_charges,$coupon_id,$discount,$total_payment)
-{
 
+
+
+// add post
+public function add_post($receiver_name,$sender,$house,$street,$area,$city,$pincode,$mail_type,$weight,$ack,$priority,$coll_address,$coll_time,$dispatch_date,$basic_charge,$delivery_charge,$ack_charges,$total_charges,$coupon_id,$discount,$total_payment,$collection_date)
+{
+    $poststatus="pending";
+    $paymentstatus="unpaid";
     
-    $stmt = $this->con->prepare("INSERT INTO `post`( `receiver_name`, `sender_id`, `house_no`, `street_1`, `area`, `city`, `pincode`, `mail_type`, `weight`, `acknowledgement`, `priority`, `collection_address`, `collection_time`, `dispatch_date`, `basic_charges`, `delivery_charge`, `ack_charges`, `total_charges`, `coupon_id`, `discount`, `total_payment`) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)");
-    $stmt->bind_param("sisssisissssssssssiss",$receiver_name,$sender,$house,$street,$area,$city,$pincode,$mail_type,$weight,$ack,$priority,$coll_address,$coll_time,$dispatch_date,$basic_charge,$delivery_charge,$ack_charges,$total_charges,$coupon_id,$discount,$total_payment);
+    
+    $stmt = $this->con->prepare("INSERT INTO `post`( `receiver_name`, `sender_id`, `house_no`, `street_1`, `area`, `city`, `pincode`, `mail_type`, `weight`, `acknowledgement`, `priority`, `collection_address`, `collection_time`, `dispatch_date`, `basic_charges`, `delivery_charge`, `ack_charges`, `total_charges`, `coupon_id`, `discount`, `total_payment`,`post_status`,`payment_status`,`collection_date`) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)");
+    $stmt->bind_param("sisssssissssssssssisssss",$receiver_name,$sender,$house,$street,$area,$city,$pincode,$mail_type,$weight,$ack,$priority,$coll_address,$coll_time,$dispatch_date,$basic_charge,$delivery_charge,$ack_charges,$total_charges,$coupon_id,$discount,$total_payment,$poststatus,$paymentstatus, $collection_date);
    
     $result = $stmt->execute();
     $lastId=mysqli_insert_id($this->con);
     $stmt->close();
     
     if ($result) {
+		
+		
+		
+	//assign post to dboy
+
+    //get zoneid from customer address
+    $stmt_zone = $this->con->prepare("SELECT a1.aid,a1.zone,a1.pincode FROM customer_address c1 ,area a1 where c1.area_id=a1.aid and c1.ca_id=?");
+    $stmt_zone->bind_param("i",$coll_address);
+    $stmt_zone->execute();
+    $Resp_zone=$stmt_zone->get_result()->fetch_assoc();
+    $stmt_zone->close();
+
+    // get dboy from zone
+    
+    $stmt_dboy = $this->con->prepare("select * from delivery_boy where zone_id=?");
+    $stmt_dboy->bind_param("i",$Resp_zone["zone"]);
+    $stmt_dboy->execute();
+    $Resp_dboy=$stmt_dboy->get_result();
+    $stmt_dboy->close();
+    while($dboy=mysqli_fetch_array($Resp_dboy))
+    {
+      // assign post to dboy
+      $distance="0";
+      $job_status="pending";
+      $stmt_post_assign = $this->con->prepare("INSERT INTO `job_assign`( `delivery_boy_id`, `post_id`, `job_status`, `distance`) VALUES (?,?,?,?)");
+      $stmt_post_assign->bind_param("iiss",$dboy["db_id"],$lastId,$job_status,$distance);
+      $Resp_post=$stmt_post_assign->execute();
+      $stmt_post_assign->close();
+
+      // send notification to dboy
+
+        $stmt_device = $this->con->prepare("SELECT * FROM `delivery_boy_device` where `type`='android' and db_id=?");
+        $stmt_device->bind_param("i",$dboy["db_id"]);
+        $stmt_device->execute();
+        $res_devices=$stmt_device->get_result();
+        $stmt_device->close();
+        $not = new stdClass();
+        $reg_ids_android = array();
+        
+        $inc=0;
+      
+        $not->message = "New job has been assigned";
+        $not->title =  "#".$lastId;
+        $not->job_id =  $lastId;
+        $not->body =  "New job has been assigned";
+        $not->status="New";
+        $title ="#".$lastId;
+        $body =   "New job has been assigned";
+
+        
+        // notification to android devices
+        
+        while ($token = mysqli_fetch_array($res_devices)) {
+            $reg_ids_android[$inc++] = $token["token"];
+        }
+       
+         $resp=send_notification_android($not, $reg_ids_android, $title, $body);
+
+    }
+    //decrement coupon counter
+	  if($coupon_id!="")
+       {
+        //decrease coustomer coupon count
+        $stmt_coupon = $this->con->prepare("update coupon_counter set counter=counter-1 where customer_id=? and coupon_id=?");
+        $stmt_coupon->bind_param("ii",$sender,$coupon_id);
+        $Resp_coupon=$stmt_coupon->execute();
+        $stmt_coupon->close();
+       }
+       
+      //insert into notification
+      $noti_type="post";
+      $noti_status=1;
+      $playstatus=1;
+      $stmt_noti = $this->con->prepare("INSERT INTO `notification`( `noti_type`, `noti_type_id`, `status`, `playstatus`) VALUES (?,?,?,?)");
+      $stmt_noti->bind_param("siii",$noti_type,$lastId,$noti_status,$playstatus);
+      $Resp_noti=$stmt_noti->execute();
+      $stmt_noti->close();	
+		
+		
 
         return 1;
     } else {
         return 0;
     }
 }
+
+
+
+//update customer address ( by Rachna 18-4-23)
+public function update_customer_address($address_id,$cust_id,$address_label,$house_no,$street,$area_id,$city_id,$pincode,$action)
+{
+
+    $stmt = $this->con->prepare("UPDATE `customer_address` SET `cust_id`=?,`address_label`=?,`house_no`=?,`street`=?,`area_id`=?,`city_id`=?,`pincode`=?,`action`=? where `ca_id`=?");
+    $stmt->bind_param("isssiissi", $cust_id,$address_label,$house_no,$street,$area_id,$city_id,$pincode,$action,$address_id);
+
+    $result = $stmt->execute();
+
+    $stmt->close();
+
+    if ($result) {
+
+        return $address_id;
+    } else {
+        return 0;
+    }
+ }
+
 
 
 // get city list
@@ -79,10 +350,24 @@ public function add_post($receiver_name,$sender,$house,$street,$area,$city,$pinc
     return $result;
 }
 
+
+// get area and pincode
+ public function area_list($ct_id)
+{
+    $stmt = $this->con->prepare("SELECT * FROM `area` WHERE city=? and status='enable'");
+     $stmt->bind_param("i",$ct_id);
+    $stmt->execute();
+    $result = $stmt->get_result();
+    $stmt->close();
+    return $result;
+}
+
+
 // get collection time list
  public function collection_time()
 {
-    $stmt = $this->con->prepare("SELECT * FROM collection_time where `status`='enable' ");
+    
+    $stmt = $this->con->prepare("SELECT id, TIME_FORMAT(start_time, '%h:%i %p') as start_time, TIME_FORMAT(end_time, '%h:%i %p') as end_time, status, user_id,action,dt from collection_time where `status`='enable' ");
     
     $stmt->execute();
     $result = $stmt->get_result();
@@ -93,7 +378,7 @@ public function add_post($receiver_name,$sender,$house,$street,$area,$city,$pinc
 // get collection adress list
  public function collection_address_list($sender_id)
 {
-    $stmt = $this->con->prepare("select ca.*,c1.city_name,a1.area_name from customer_address ca, area a1,city c1 where ca.area_id=a1.aid and ca.city_id=c1.city_id and ca.cust_id=? ");
+    $stmt = $this->con->prepare("select ca.*,c1.city_name,a1.area_name from customer_address ca, area a1,city c1 where ca.area_id=a1.aid and ca.city_id=c1.city_id and ca.cust_id=?");
     $stmt->bind_param("i",$sender_id);
     $stmt->execute();
     $result = $stmt->get_result();
@@ -123,6 +408,27 @@ public function add_post($receiver_name,$sender,$house,$street,$area,$city,$pinc
     return $result;
 }
 
+
+//get_privacy 
+public function get_privacy()
+{
+    $stmt = $this->con->prepare("select * from privacy_policy where `type`='user'");
+    $stmt->execute();
+    $results = $stmt->get_result();
+    $stmt->close();
+    return $results;
+}
+
+// get_terms
+public function get_terms()
+{
+    $stmt = $this->con->prepare("select * from termsandcondition where `type`='user'");
+    $stmt->execute();
+    $results = $stmt->get_result();
+    $stmt->close();
+    return $results;
+}
+
 // user login
 
 public function customerLogin($email, $pass)
@@ -138,6 +444,20 @@ public function customerLogin($email, $pass)
     return $num_rows > 0;
     
 }
+
+
+// get profile  added by jay 23-04-23
+    public function get_profile($uid)
+    {
+        $stmt = $this->con->prepare("SELECT * FROM `customer_reg` WHERE id=?");
+        $stmt->bind_param("i", $uid);
+        $stmt->execute();
+        $results = $stmt->get_result();
+        $stmt->close();
+        return $results;
+    }
+
+
 
   //Method to get user details by email
 public function getUser($email)
@@ -212,6 +532,242 @@ public function new_notification($noti_type,$pid,$msg,$status,$playstatus)
     }
 
 }
+
+//  get amount 
+public function get_amount($weight,$mail_type)
+{
+
+    
+  /*  $stmt = $this->con->prepare("SELECT * FROM mail_type m1,mail_type_tariff m2 WHERE m2.mail_type=m1.id and m1.id=?");
+    $stmt->bind_param("i", $mail_type);
+    $stmt->execute();
+    $post_data = $stmt->get_result();
+    $stmt->close();
+    while($mail_amount=mysqli_fetch_array($post_data))
+    {
+        
+        if($weight>=$mail_amount["gm_from"] && $weight<=$mail_amount["gm_to"])
+        {
+            $basic_charges=$mail_amount["amount"];
+        }
+        else
+        {
+            $basic_charges=0;
+        }
+    }*/
+    
+   
+    
+    $stmt = $this->con->prepare("SELECT m2.amount FROM mail_type m1,mail_type_tariff m2 WHERE m2.mail_type=m1.id and m2.gm_from<=$weight and m2.gm_to>=$weight and  m1.id=?");
+    $stmt->bind_param("i", $mail_type);
+    $stmt->execute();
+    $post_data = $stmt->get_result();
+    $stmt->close();
+    
+    if($mail_amount=mysqli_fetch_array($post_data))
+    {
+            $basic_charges=$mail_amount["amount"];
+    }
+    else
+    {
+            $basic_charges=0;
+    }
+    
+    
+    return $basic_charges;
+   
+
+}
+//  get delivery charges 
+public function get_delivery_charges()
+{
+
+    
+    $stmt = $this->con->prepare("select * from delivery_settings where status='enable'");
+    
+    $stmt->execute();
+    $del_charges = $stmt->get_result()->fetch_assoc();
+    $stmt->close();
+    
+    return $del_charges;
+   
+
+}
+
+//  get coupon discount 
+public function get_discount($coupon_id,$tot_charges,$total_del_charge)
+{
+
+    
+    $stmt = $this->con->prepare("select * from coupon where c_id=?");
+    $stmt->bind_param("i",$coupon_id);
+    $stmt->execute();
+    $res_coupon = $stmt->get_result();
+    $stmt->close();
+
+    $row_num = mysqli_num_rows($res_coupon);
+
+         
+        if ($row_num > 0) {
+            $date = date('Y-m-d');
+            $p_row = mysqli_fetch_array($res_coupon);
+            $start_date = $p_row['start_date'];
+            $end_date = $p_row['end_date'];
+            $discount = $p_row['discount'];
+            $max_discount_amount = $p_row['max_discount'];
+            $min_amount = $p_row['min_amount'];
+            $percentage = $p_row["discount"];
+            
+            $paymentDate = date('Y-m-d', strtotime($date));
+            //echo $paymentDate; // echos today! 
+            $contractDateBegin = date('Y-m-d', strtotime($start_date));
+            $contractDateEnd = date('Y-m-d', strtotime($end_date));
+
+           
+            if ((strtotime($date) >= strtotime($start_date)) && (strtotime($date) <= strtotime($end_date))) {
+
+                if ($tot_charges >= $min_amount) {
+
+                    // $amount_discount1 = $total_amt * $discount;
+                    // $amount_discount = $amount_discount1 / 100;
+                    $amount_discount1 = $total_del_charge * $discount;
+                    $amount_discount = $amount_discount1 / 100.0;
+
+                    if ($amount_discount < $max_discount_amount) {
+                        $final_discount = $amount_discount;
+                        //$final_amount = $total_amt - $final_discount;
+                       
+                        return $final_discount;
+                    } else {
+
+                        $final_discount = $max_discount_amount;
+                        //$final_amount = $total_amt - $final_discount;
+                        
+                        return $final_discount;
+                    }
+                } else {
+                    return 2;
+                }
+            } else {
+                return 1;
+            }
+        } else {   
+            return 1;
+        }
+    
+    
+   
+
+}
+
+// get post image
+public function post_image($pid)
+{
+    $stmt = $this->con->prepare("SELECT d1.* FROM delivery_images d1,job_assign j1 WHERE d1.job_id=j1.id and j1.post_id=? and d1.status='dispatch' ");
+     $stmt->bind_param("i",$pid);
+    $stmt->execute();
+    $result = $stmt->get_result()->fetch_assoc();
+    $stmt->close();
+    return $result;
+}
+
+ // get customer address list  
+public function get_customer_address($cid)
+{
+    $stmt = $this->con->prepare("select concat(ca.address_label,ca.house_no,ca.street,c1.city_name,a1.area_name) as address from customer_address ca, area a1,city c1 where ca.area_id=a1.aid and ca.city_id=c1.city_id and ca.cust_id=?");
+    $stmt->bind_param("i",$cid);
+    $stmt->execute();
+    $result = $stmt->get_result();
+    $stmt->close();
+    return $result;
+}
+//delete customer address
+
+public function delete_customer_address($address_id)
+{
+
+    $stmt = $this->con->prepare("delete from customer_address where ca_id=? ");
+    
+    $stmt->bind_param("i", $address_id);
+    $result = $stmt->execute();
+    $stmt->close();
+    if ($result) {
+        return 1;
+    } else {
+        return 0;
+    }
+}
+
+
+public function add_post_review($post_id,$rating,$review,$action)
+{
+
+    $stmt = $this->con->prepare("INSERT INTO `post_review`(`post_id`,`rating`,`review`,`action`) VALUES (?,?,?,?)");
+    $stmt->bind_param("idss", $post_id,$rating,$review,$action);
+
+    $result = $stmt->execute();
+    $lastId=mysqli_insert_id($this->con);
+    $stmt->close();
+
+    if ($result) {
+
+        return $lastId;
+    } else {
+        return 0;
+    }
+ }
+
+// fcm notificaton for android
+private function send_notification_android($data, $reg_ids_android, $title, $body)
+{
+
+    $url = 'https://fcm.googleapis.com/fcm/send';
+   
+    $api_key = 'AAAA2n2PB4A:APA91bEb_4LGpFCH3xTmzG763VWpuV02DGrMmunv1e-bza06vBLdIZgcHaqYu_f7P8a-druZ7buh6b1-OzcLGCP1Yc0bywdVb93dlKQ-BmOgZCVSD135Itw9UKSuNy6rWGqyWr7Q9eLX';
+    
+    
+    $msg = array(
+        'title' => $title,
+        'body' => $body,
+        'icon' => 'myicon',
+        'sound' => 'custom_notification.mp3',
+        'data' => $data
+    );
+
+    $fields = array(
+        'registration_ids' => $reg_ids_android,
+        'data' => $data,
+
+    );
+//print_r($fields);
+    $headers = array(
+        'Content-Type:application/json',
+        'Authorization:key=' . $api_key
+    );
+
+    // echo json_encode($fields);
+    $ch = curl_init();
+    curl_setopt($ch, CURLOPT_URL, $url);
+    curl_setopt($ch, CURLOPT_POST, true);
+    curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+    curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 0);
+    curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+    curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($fields));
+    $result = curl_exec($ch);
+    if ($result === FALSE) {
+        //die('FCM Send Error: ' . curl_error($ch));
+        $resp=0;
+    }
+    else{
+        $resp=$result;
+    }
+    curl_close($ch);
+
+    //  echo $result;
+    return $resp;
+}
+
 //------------------------------------//
 
     
@@ -1189,27 +1745,7 @@ public function faculty_password_update($uid, $password)
             return 0;
         }
     }
-    public function get_privacy($typ)
-    {
-        $stmt = $this->con->prepare("select * from privacy_policy where `type`=?");
-        $stmt->bind_param("s", $typ);
-        $stmt->execute();
-        $results = $stmt->get_result();
-        $stmt->close();
-        return $results;
-    }
-
-    // get terms
-
-    public function get_terms($typ)
-    {
-        $stmt = $this->con->prepare("SELECT * FROM termsandcondition WHERE `type`=?");
-        $stmt->bind_param("s", $typ);
-        $stmt->execute();
-        $user = $stmt->get_result();
-        $stmt->close();
-        return $user;
-    }
+    
     //update customer status
     public function update_customerstatus($mobile)
     {

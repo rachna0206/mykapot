@@ -2,13 +2,6 @@
 include("header.php");
 error_reporting(E_ALL);
 
-// for permission
-include_once("checkPer.php");
-if($row=checkPermission($_SESSION["utype"],"notification")){ }
-else{
-	header("location:home.php");
-}
-
 
 // insert data
 if(isset($_REQUEST['btnsubmit']))
@@ -17,8 +10,7 @@ if(isset($_REQUEST['btnsubmit']))
   $option=$_REQUEST["option"];
   $message=$_REQUEST["message"];
   $user = isset($_REQUEST["user"])?$_REQUEST["user"]:"";
-   
-  $userstring=implode(",",$user);
+  $userstring=isset($_REQUEST["user"])?implode(",",$user):"";
   $image=false;
   $res = 0;
   $res1 = 0;
@@ -48,7 +40,7 @@ if(isset($_REQUEST['btnsubmit']))
 
   if($option == 'ios')
   {
-    $iosuser_qry="SELECT * FROM `student_device` s1,student s2 where s1.stu_id=s2.sid and s1.device_type='ios' and s1.device_token!=''";
+    $iosuser_qry="SELECT * FROM `customer_devices` c1,customer_reg c2 where c1.cust_id=c2.id and c1.device_type='ios' and c1.device_token!=''";
     $iosuser_resp=$obj->select($iosuser_qry);
     if(mysqli_num_rows($iosuser_resp)>0)
     {
@@ -71,7 +63,7 @@ if(isset($_REQUEST['btnsubmit']))
         $data->is_dispatch="false";
         $body = $message;
         //notification::send_notification($msg_payload,$ids);
-         echo   send_notification_ios($data, $reg_ids_ios, $title, $body);
+        //send_notification_ios($data, $reg_ids_ios, $title, $body);
 
         $res = 0;
 
@@ -86,7 +78,7 @@ if(isset($_REQUEST['btnsubmit']))
     else if($option == 'android')
     {
         $src='android';
-         $user_query = "SELECT * FROM `student_device` s1,student s2 where s1.stu_id=s2.sid and s1.device_type='android' and s1.device_token!=''";
+         $user_query = "SELECT * FROM `customer_devices` c1,customer_reg c2 where c1.cust_id=c2.id and c1.device_type='android' and c1.device_token!=''";
         $user_result = $obj->select($user_query);
         $user_num = mysqli_num_rows($user_result);
         if($user_num > 0)
@@ -112,8 +104,8 @@ if(isset($_REQUEST['btnsubmit']))
                 $data->image="notification_img/".$MainFileName;
             }
             $body = $message;
-            // notification::send_notification($msg_payload,$ids);
-             send_notification_android($data, $reg_ids_android, $title, $body);
+            
+            //send_notification_android($data, $reg_ids_android, $title, $body);
             $res = 0;
 
         }else
@@ -124,7 +116,7 @@ if(isset($_REQUEST['btnsubmit']))
     }
     else if($option=="specific_user")
     {
-        $user_qry="SELECT * FROM `student_device` s1,student s2 where s1.stu_id=s2.sid and s1.device_type='android' and s1.device_token!=''  and find_in_set(s2.sid,'".$userstring."')";
+        $user_qry="SELECT * FROM `customer_devices` c1,customer_reg c2 where c1.cust_id=c2.id and c1.device_type='android' and c1.device_token!=''  and find_in_set(c2.id,'".$userstring."')";
         $user_resp=$obj->select($user_qry);
         if(mysqli_num_rows($user_resp)>0)
         {
@@ -155,11 +147,9 @@ if(isset($_REQUEST['btnsubmit']))
                 $data->image="notification_img/".$MainFileName;
             }
             $body = $message;
-            // print_r($data);
-            //print_r($reg_ids_android);
-            //notification::send_notification($msg_payload,$ids);
-            send_notification_ios($data, $reg_ids_ios, $title, $body);
-            send_notification_android($data, $reg_ids_android, $title, $body);
+            
+           // send_notification_ios($data, $reg_ids_ios, $title, $body);
+          //  send_notification_android($data, $reg_ids_android, $title, $body);
            
 
         }
@@ -171,7 +161,7 @@ if(isset($_REQUEST['btnsubmit']))
 
     else
     {
-        $user_query = "SELECT * FROM `student_device` s1,student s2 where s1.stu_id=s2.sid  and s1.device_token!=''";
+        $user_query = "SELECT * FROM `customer_devices` c1,customer_reg c2 where c1.cust_id=c2.id  and c1.device_token!=''";
         $user_result = $obj->select($user_query);
         $user_num = mysqli_num_rows($user_result);
         if($user_num > 0)
@@ -216,15 +206,17 @@ if(isset($_REQUEST['btnsubmit']))
     }
 
 
-     $add_noti="INSERT INTO `notification_center`( `notification_type`, `msg`, `user_ids`,`image`) VALUES ('".$option."','".$message."','".$userstring."','".$MainFileName."')";
+    $add_noti="INSERT INTO `notification_center`( `notification_type`, `msg`, `user_ids`,`image`) VALUES ('".$option."','".$message."','".$userstring."','".$MainFileName."')";
     $res_noti=$obj->select($add_noti);
     
     if($res1 == 0)
     {
-        header("location:send_notification.php?msg=n_success");
+        setcookie("msg", "data",time()+3600,"/");
+        header("location:send_notification.php");
 
     }else{
-        header("location:send_notification.php?msg=n_fail");
+        setcookie("msg", "fail",time()+3600,"/");
+        header("location:send_notification.php");
 
     }
 
@@ -274,11 +266,11 @@ function send_notification_ios($data,$reg_ids,$title,$body)
     //  echo $result;
     return $result;
 }
+
 // fcm notificaton for android
 function send_notification_android($data,$reg_ids_android,$title,$body)
 {
-    //echo "in notif";
-    //print_r($reg_ids_android);
+    
     $url='https://fcm.googleapis.com/fcm/send';
     $api_key='AAAA5lYuOAA:APA91bEImlO4QpQYgwUluphC4Di-qhr9q_E6b9ZvtSvwoSxA9N5CN0LbnOiexpnY8hih5XBUW84wiEeHj_MGBcJR8o9BfkEK9FXVizGwIfMir-NEvZ3_IgjL1Eu8ylZdkoVAKCYt174K';
     $msg = array(
@@ -294,13 +286,13 @@ function send_notification_android($data,$reg_ids_android,$title,$body)
         'data' => $data,
 
     );
-//print_r($fields);
+
     $headers = array(
         'Content-Type:application/json',
         'Authorization:key='.$api_key
     );
 
-    echo json_encode($fields);
+    json_encode($fields);
     $ch = curl_init();
     curl_setopt($ch, CURLOPT_URL, $url);
     curl_setopt($ch, CURLOPT_POST, true);
@@ -333,25 +325,14 @@ if(isset($_COOKIE["msg"]) )
 
   ?>
   <div class="alert alert-primary alert-dismissible" role="alert">
-    Data added succesfully
+    Notification sent succesfully
     <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close">
     </button>
   </div>
   <script type="text/javascript">eraseCookie("msg")</script>
   <?php
   }
-  if($_COOKIE['msg']=="update")
-  {
-
-  ?>
-  <div class="alert alert-primary alert-dismissible" role="alert">
-    Data updated succesfully
-    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close">
-    </button>
-  </div>
-  <script type="text/javascript">eraseCookie("msg")</script>
-  <?php
-  }
+  
   if($_COOKIE['msg']=="data_del")
   {
 
@@ -391,87 +372,86 @@ if(isset($_COOKIE["msg"]) )
   }
 ?>
 
-<?php if($row["write_func"]=="y" || $row["upd_func"]=="y" || $row["read_func"]=="y"){ ?>
-              <!-- Basic Layout -->
-              <div class="row">
-                <div class="col-xl">
-                  <div class="card mb-4">
-                    <div class="card-header d-flex justify-content-between align-items-center">
-                      <h5 class="mb-0">Send Notification</h5>
-                      
-                    </div>
-                    <div class="card-body">
-                      <form method="post" enctype="multipart/form-data">
-                        <input type="hidden" name="ttId" id="ttId">
-                        <div class="mb-3">
-                          <label class="form-label" for="basic-default-fullname">To</label>
-                            
-                          
-                          <div class="form-check form-check-inline mt-3">
-                            <input type="radio" value="all" name="option" id="all" checked onclick="show_users()">
-                            <label class="form-check-label" for="inlineRadio1">All</label>
-                          </div>
-                          <div class="form-check form-check-inline mt-3">
-                            <input type="radio" value="ios" name="option" id="ios" onclick="show_users()">
-                            <label class="form-check-label" for="inlineRadio1">iOS</label>
-                          </div>
-                          <div class="form-check form-check-inline mt-3">
-                            <input type="radio" value="android" name="option" id="android" onclick="show_users()">
-                            <label class="form-check-label" for="inlineRadio1">Android</label>
-                          </div>
-                          <div class="form-check form-check-inline mt-3">
-                            <input type="radio" value="specific_user" name="option" id="setuser"  onclick="show_users()">
-                            <label class="form-check-label" for="inlineRadio1">Specific users</label>
-                          </div>
 
-                        </div>
-                        
-                        <div class="mb-3" id="users_div" style="display: none">
-                          <label class="form-label" for="basic-default-fullname">Students</label>
-                          <select id="user" name="user[]" class="form-control select2-multiple" multiple>
+<!-- Basic Layout -->
+<div class="row">
+<div class="col-xl">
+  <div class="card mb-4">
+    <div class="card-header d-flex justify-content-between align-items-center">
+      <h5 class="mb-0">Send Notification</h5>
+      
+    </div>
+    <div class="card-body">
+      <form method="post" enctype="multipart/form-data">
+        <input type="hidden" name="ttId" id="ttId">
+        <div class="mb-3">
+          <label class="form-label" for="basic-default-fullname">To</label>
+            
+          
+          <div class="form-check form-check-inline mt-3">
+            <input type="radio" value="all" name="option" id="all" checked onclick="show_users()">
+            <label class="form-check-label" for="inlineRadio1">All</label>
+          </div>
+          <div class="form-check form-check-inline mt-3">
+            <input type="radio" value="ios" name="option" id="ios" onclick="show_users()">
+            <label class="form-check-label" for="inlineRadio1">iOS</label>
+          </div>
+          <div class="form-check form-check-inline mt-3">
+            <input type="radio" value="android" name="option" id="android" onclick="show_users()">
+            <label class="form-check-label" for="inlineRadio1">Android</label>
+          </div>
+          <div class="form-check form-check-inline mt-3">
+            <input type="radio" value="specific_user" name="option" id="setuser"  onclick="show_users()">
+            <label class="form-check-label" for="inlineRadio1">Specific users</label>
+          </div>
 
-                              <?php
-                              $user_qry="select * from student";
-                              $res_qry=$obj->select($user_qry);
-                              while ($users=mysqli_fetch_array($res_qry))
-                              {
-                                  ?>
-                                  <option value="<?php echo $users["sid"]?>"><?php echo $users["name"]?></option>
-                                  <?php
-                              }
-                              ?>
-                          </select>
-                        </div>
-                        
-                        <div class="mb-3">
-                          <label class="form-label" for="basic-default-fullname">Image</label>
-                          <input id="file1" name="file1" type="file" onchange="readURL(this);"/>
-                                <img id='PreviewImage' name="PreviewImage" src="" height="100" width="120" hidden="true">
-                        </div>
-                        
-                        <div class="mb-3">
-                          <label class="form-label" for="basic-default-fullname">Message</label>
-                          <textarea class=" form-control" name="message" id="message" rows="4" required ></textarea>
-                        </div>
-                        
-                    
-                      
-                        
-                    <?php if($row["write_func"]=="y"){ ?>
-                        <button type="submit" name="btnsubmit" id="btnsubmit" class="btn btn-primary">Save</button>
-                    <?php } ?>
-                        <button type="reset" name="btncancel" id="btncancel" class="btn btn-secondary" onclick="window.location.reload()">Cancel</button>
+        </div>
+        
+        <div class="mb-3" id="users_div" style="display: none">
+          <label class="form-label" for="basic-default-fullname">Users</label>
+          <select id="user" name="user[]" class="form-control select2-multiple" multiple>
 
-                      </form>
-                    </div>
-                  </div>
-                </div>
-                
-              </div>
+              <?php
+              $user_qry="select * from customer_reg";
+              $res_qry=$obj->select($user_qry);
+              while ($users=mysqli_fetch_array($res_qry))
+              {
+                  ?>
+                  <option value="<?php echo $users["id"]?>"><?php echo $users["name"]?></option>
+                  <?php
+              }
+              ?>
+          </select>
+        </div>
+        
+        <div class="mb-3">
+          <label class="form-label" for="basic-default-fullname">Image</label>
+          <input id="file1" name="file1" type="file" onchange="readURL(this);"/>
+                <img id='PreviewImage' name="PreviewImage" src="" height="100" width="120" hidden="true">
+        </div>
+        
+        <div class="mb-3">
+          <label class="form-label" for="basic-default-fullname">Message</label>
+          <textarea class=" form-control" name="message" id="message" rows="4" required ></textarea>
+        </div>
+        
+    
+      
+        
+    
+        <button type="submit" name="btnsubmit" id="btnsubmit" class="btn btn-primary">Save</button>
+    
+        <button type="reset" name="btncancel" id="btncancel" class="btn btn-secondary" onclick="window.location.reload()">Cancel</button>
+
+      </form>
+    </div>
+  </div>
+</div>
+
+</div>
            
 
 
-<?php  } ?>
 
            <!-- grid -->
 

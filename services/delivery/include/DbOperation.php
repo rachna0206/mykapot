@@ -21,6 +21,7 @@ public function delivery_reg($name, $email, $password, $contact, $address,  $cit
         if (!$this->isContactExists($contact))
         {
    
+
             $stmt = $this->con->prepare("INSERT INTO delivery_boy( `name`, `email`, `password`, `contact`, `address`, `city`, `pincode`, `id_proof_type`, `id_proof`, `zone_id`, `status`, `action`,`profile_pic`) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?)");
             $stmt->bind_param("sssssisssisss",$name, $email, $password, $contact, $address,  $city, $pincode, $id_proof_type, $MainFileName, $zone_id, $status, $action,$ProofFileName);
             $result = $stmt->execute();   
@@ -55,7 +56,7 @@ public function Delivery_boyLogin($email, $pass)
         $stmt->store_result();
         $num_rows = $stmt->num_rows;
         $stmt->close();
-        return $num_rows > 0;
+        return $num_rows;
         
     }
 
@@ -66,6 +67,17 @@ public function Delivery_boyLogin($email, $pass)
     {
         $stmt = $this->con->prepare("SELECT * FROM delivery_boy WHERE email=?");
         $stmt->bind_param("s", $email);
+        $stmt->execute();
+        $deliveryboy = $stmt->get_result()->fetch_assoc();
+        $stmt->close();
+        return $deliveryboy;
+    }
+    
+    //get delivery boy reg data for otp login
+     public function getDelivery_boy_phno($phno)
+    {
+        $stmt = $this->con->prepare("SELECT * FROM delivery_boy WHERE contact=?");
+        $stmt->bind_param("s", $phno);
         $stmt->execute();
         $deliveryboy = $stmt->get_result()->fetch_assoc();
         $stmt->close();
@@ -120,6 +132,19 @@ public function Delivery_boyLogin($email, $pass)
     }
 
 
+// check profile
+    public function check_profile($userid)
+    {
+        $stmt = $this->con->prepare("select d2.id,db_id,name,email,contact,id_proof,profile_pic,d2.status from delivery_boy d1,delivery_boy_avalibility d2 where d1.db_id=d2.delivery_boy_id and d1.db_id=? ORDER by d2.id desc LIMIT 1");
+        $stmt->bind_param("i", $userid);
+        $stmt->execute();
+        $results = $stmt->get_result();
+        $stmt->close();
+        return $results;
+    }
+
+
+
     // get job list 
     public function get_job_list($deliveryboy_id)
     {
@@ -127,7 +152,8 @@ public function Delivery_boyLogin($email, $pass)
         $today=date("Y-m-d");
         
         
-        $stmt = $this->con->prepare("SELECT j1.id as job_id,p1.id as post_id,p1.receiver_name,c1.name as sender_name,c1.contact as sender_phone,m1.mail_type,p1.acknowledgement,p1.collection_address,p1.priority,p1.dispatch_date,c3.start_time as collection_start_time,c3.end_time as collection_end_time,j1.job_status,c2.address_label,c2.house_no,c2.street,a1.area_name,c2.pincode,p1.delivery_charge,p1.basic_charges,p1.ack_charges,p1.total_charges,p1.discount,p1.total_payment,p1.post_status,p1.payment_status FROM job_assign j1,delivery_boy db1,post p1,customer_reg c1,customer_address c2,area a1,collection_time c3,mail_type m1 where j1.post_id=p1.id and j1.delivery_boy_id=db1.db_id and p1.sender_id=c1.id and p1.collection_address=c2.ca_id and c2.area_id=a1.aid and p1.collection_time=c3.id and p1.mail_type=m1.id and db1.db_id=? and job_status='pending' order by j1.id desc ");
+        $stmt = $this->con->prepare("SELECT j1.id as job_id,p1.id as post_id,p1.receiver_name,c1.name as sender_name,c1.contact as sender_phone,m1.mail_type,p1.acknowledgement,p1.collection_address,p1.priority, date_format(p1.dispatch_date,'%d-%m-%Y') as dispatch_date, date_format(p1.collection_date,'%d-%m-%Y') as collection_date, time_format(c3.start_time,'%h:%i %p') as collection_start_time, time_format(c3.end_time,'%h:%i %p') as collection_end_time,j1.job_status,c2.address_label,c2.house_no,c2.street,a1.area_name,c2.pincode,(p1.delivery_charge - p1.discount) as total_payment,p1.basic_charges,p1.ack_charges,p1.total_charges,p1.discount,p1.delivery_charge,p1.post_status,p1.payment_status FROM job_assign j1,delivery_boy db1,post p1,customer_reg c1,customer_address c2,area a1,collection_time c3,mail_type m1 where j1.post_id=p1.id and j1.delivery_boy_id=db1.db_id and p1.sender_id=c1.id and p1.collection_address=c2.ca_id and c2.area_id=a1.aid and p1.collection_time=c3.id and p1.mail_type=m1.id and db1.db_id=? and job_status='pending' order by j1.id desc ");
+        // added (p1.delivery_charge - p1.discount) as total_payment which is actual delivery boys total earning in the app
         $stmt->bind_param("i", $deliveryboy_id);
         $stmt->execute();
         $joblist = $stmt->get_result();
@@ -136,13 +162,14 @@ public function Delivery_boyLogin($email, $pass)
 
     }
 
-     // get active job list
+     // get active job list -> modified by jay
     public function get_active_job_list($deliveryboy_id)
     {
         $today=date("Y-m-d");
         $yesterday=date("Y-m-d",strtotime("-1 days"));
 
-        $stmt = $this->con->prepare("SELECT j1.id as job_id,p1.id as post_id,p1.receiver_name,c1.name as sender_name,c1.contact as sender_phone,m1.mail_type,p1.acknowledgement,p1.collection_address,p1.priority,p1.dispatch_date,c3.start_time as collection_start_time,c3.end_time as collection_end_time,j1.job_status,c2.address_label,c2.house_no,c2.street,a1.area_name,c2.pincode,p1.delivery_charge,p1.basic_charges,p1.ack_charges,p1.total_charges,p1.discount,p1.total_payment,p1.post_status,p1.payment_status FROM job_assign j1,delivery_boy db1,post p1,customer_reg c1,customer_address c2,area a1,collection_time c3,mail_type m1 where j1.post_id=p1.id and j1.delivery_boy_id=db1.db_id and p1.sender_id=c1.id and p1.collection_address=c2.ca_id and c2.area_id=a1.aid and p1.collection_time=c3.id and p1.mail_type=m1.id  and db1.db_id=?  and (j1.job_status='accept' or j1.job_status='dispatch')  order by j1.id ");
+        $stmt = $this->con->prepare("SELECT j1.id as job_id,p1.id as post_id,p1.receiver_name,c1.name as sender_name,c1.contact as sender_phone,m1.mail_type,p1.acknowledgement,p1.collection_address,p1.priority, date_format(p1.collection_date,'%d-%m-%Y') as collection_date, date_format(p1.dispatch_date,'%d-%m-%Y') as dispatch_date, time_format(c3.start_time,'%h:%i %p') as collection_start_time, time_format(c3.end_time,'%h:%i %p') as collection_end_time,j1.job_status,c2.address_label,c2.house_no,c2.street,a1.area_name,c2.pincode,p1.delivery_charge,p1.basic_charges,p1.ack_charges,p1.total_charges,p1.discount,(p1.delivery_charge - p1.discount) as total_payment,p1.post_status,p1.payment_status FROM job_assign j1,delivery_boy db1,post p1,customer_reg c1,customer_address c2,area a1,collection_time c3,mail_type m1 where j1.post_id=p1.id and j1.delivery_boy_id=db1.db_id and p1.sender_id=c1.id and p1.collection_address=c2.ca_id and c2.area_id=a1.aid and p1.collection_time=c3.id and p1.mail_type=m1.id  and db1.db_id=?  and (j1.job_status='accept')  order by j1.id ");
+         // added (p1.delivery_charge - p1.discount) as total_payment which is actual delivery boys total earning in the app
         // and post status='pending' or 'collected'
         $stmt->bind_param("i", $deliveryboy_id);
         $stmt->execute();
@@ -152,13 +179,33 @@ public function Delivery_boyLogin($email, $pass)
 
 
     }
+    
+    
+     // get post job list -> modified by jay
+    public function get_post_job_list($deliveryboy_id)
+    {
+        $today=date("Y-m-d");
+        $yesterday=date("Y-m-d",strtotime("-1 days"));
+
+        $stmt = $this->con->prepare("SELECT j1.id as job_id,p1.id as post_id,p1.receiver_name,c1.name as sender_name,c1.contact as sender_phone,m1.mail_type,p1.acknowledgement,p1.collection_address,p1.priority, date_format(p1.dispatch_date,'%d-%m-%Y') as dispatch_date, time_format(c3.start_time,'%h:%i %p') as collection_start_time, time_format(c3.end_time,'%h:%i %p') as collection_end_time, j1.job_status,c2.address_label,c2.house_no,c2.street,a1.area_name,c2.pincode,p1.delivery_charge,p1.basic_charges,p1.ack_charges,p1.total_charges,p1.discount,(p1.delivery_charge-p1.discount) as total_payment,p1.post_status,p1.payment_status FROM job_assign j1,delivery_boy db1,post p1,customer_reg c1,customer_address c2,area a1,collection_time c3,mail_type m1 where j1.post_id=p1.id and j1.delivery_boy_id=db1.db_id and p1.sender_id=c1.id and p1.collection_address=c2.ca_id and c2.area_id=a1.aid and p1.collection_time=c3.id and p1.mail_type=m1.id  and db1.db_id=?  and (j1.job_status='transit')  order by j1.id ");
+        // added (p1.delivery_charge - p1.discount) as total_payment which is actual delivery boys total earning in the app
+        // and post status='pending' or 'collected'
+        $stmt->bind_param("i", $deliveryboy_id);
+        $stmt->execute();
+        $joblist = $stmt->get_result();
+        $stmt->close();
+        return $joblist;
+
+
+    }
+    
 
     // get job history
     public function get_job_history($deliveryboy_id)
     {
 
         $today=date("Y-m-d");
-        $stmt = $this->con->prepare("SELECT j1.id as job_id,p1.id as post_id,p1.receiver_name,c1.name as sender_name,c1.contact as sender_phone,m1.mail_type,p1.acknowledgement,p1.collection_address,p1.priority,p1.dispatch_date,c3.start_time as collection_start_time,c3.end_time as collection_end_time,j1.job_status,c2.address_label,c2.house_no,c2.street,a1.area_name,c2.pincode FROM job_assign j1,delivery_boy db1,post p1,customer_reg c1,customer_address c2,area a1,collection_time c3,mail_type m1 where j1.post_id=p1.id and j1.delivery_boy_id=db1.db_id and p1.sender_id=c1.id and p1.collection_address=c2.ca_id and c2.area_id=a1.aid and p1.collection_time=c3.id and p1.mail_type=m1.id and j1.delivery_boy_id=? and j1.job_status='deliver' order by j1.id desc");
+        $stmt = $this->con->prepare("SELECT j1.id as job_id,p1.id as post_id,p1.receiver_name,c1.name as sender_name,c1.contact as sender_phone,m1.mail_type,p1.acknowledgement,p1.collection_address,p1.priority, date_format(p1.dispatch_date,'%d-%m-%Y') as dispatch_date, time_format(c3.start_time,'%h:%i %p') as collection_start_time, time_format(c3.end_time,'%h:%i %p') as collection_end_time,j1.job_status,c2.address_label,c2.house_no,c2.street,a1.area_name,c2.pincode FROM job_assign j1,delivery_boy db1,post p1,customer_reg c1,customer_address c2,area a1,collection_time c3,mail_type m1 where j1.post_id=p1.id and j1.delivery_boy_id=db1.db_id and p1.sender_id=c1.id and p1.collection_address=c2.ca_id and c2.area_id=a1.aid and p1.collection_time=c3.id and p1.mail_type=m1.id and j1.delivery_boy_id=? and j1.job_status='dispatched' order by j1.id desc");
         $stmt->bind_param("i", $deliveryboy_id);
         $stmt->execute();
         $joblist = $stmt->get_result();
@@ -173,7 +220,7 @@ public function Delivery_boyLogin($email, $pass)
     {
 
         $today=date("Y-m-d");
-        $stmt = $this->con->prepare("SELECT j1.id as job_id,p1.id as post_id,p1.receiver_name,c1.name as sender_name,c1.contact as sender_phone,m1.mail_type,p1.acknowledgement,p1.collection_address,p1.priority,p1.dispatch_date,c3.start_time as collection_start_time,c3.end_time as collection_end_time,j1.job_status,c2.address_label,CONCAT(c2.house_no,',',c2.street,',',a1.area_name,',',c4.city_name,',',c2.pincode) as collection_address,concat(p1.house_no,',',p1.street_1,',',p1.area,',',c5.city_name,',',p1.pincode) as receiver_address FROM job_assign j1,delivery_boy db1,post p1,customer_reg c1,customer_address c2,area a1,collection_time c3,mail_type m1,city c4,city c5 where j1.post_id=p1.id and j1.delivery_boy_id=db1.db_id and p1.sender_id=c1.id and p1.collection_address=c2.ca_id and c2.area_id=a1.aid and p1.collection_time=c3.id and p1.mail_type=m1.id and c2.city_id=c4.city_id and p1.city=c5.city_id and j1.id=?  order by j1.id desc");
+        $stmt = $this->con->prepare("SELECT j1.id as job_id,p1.id as post_id,p1.receiver_name,c1.name as sender_name,c1.contact as sender_phone,m1.mail_type,p1.acknowledgement,p1.collection_address,p1.priority, date_format(p1.dispatch_date,'%d-%m-%Y') as dispatch_date, date_format(p1.collection_date,'%d-%m-%Y') as collection_date ,p1.weight, time_format(c3.start_time,'%h:%i %p') as collection_start_time, time_format(c3.end_time,'%h:%i %p') as collection_end_time,j1.job_status,c2.address_label,CONCAT(c2.house_no,',',c2.street,',',a1.area_name,',',c4.city_name,',',c2.pincode) as collection_address,concat(p1.house_no,',',p1.street_1,',',p1.area,',',p1.city,',',p1.pincode) as receiver_address,p1.total_charges,p1.total_payment,c2.map_location FROM job_assign j1,delivery_boy db1,post p1,customer_reg c1,customer_address c2,area a1,collection_time c3,mail_type m1,city c4 where j1.post_id=p1.id and j1.delivery_boy_id=db1.db_id and p1.sender_id=c1.id and p1.collection_address=c2.ca_id and c2.area_id=a1.aid and p1.collection_time=c3.id and p1.mail_type=m1.id and c2.city_id=c4.city_id and j1.id=? order by j1.id desc");
         $stmt->bind_param("i", $job_id);
         $stmt->execute();
         $joblist = $stmt->get_result();
@@ -182,6 +229,39 @@ public function Delivery_boyLogin($email, $pass)
 
 
     }
+    
+     // get post job detail
+    public function get_post_job_detail($job_id)
+    {
+
+        $today=date("Y-m-d");
+        $stmt = $this->con->prepare("select tb.*,di1.image as barcode from (SELECT j1.id as job_id,p1.id as post_id,p1.receiver_name,c1.name as sender_name,c1.contact as sender_phone,m1.mail_type,p1.acknowledgement,p1.priority,p1.dispatch_date,c3.start_time as collection_start_time,c3.end_time as collection_end_time,j1.job_status,c2.address_label,CONCAT(c2.house_no,',',c2.street,',',a1.area_name,',',c4.city_name,',',c2.pincode) as collection_address,concat(p1.house_no,',',p1.street_1,',',p1.area,',',p1.city,',',p1.pincode) as receiver_address,p1.weight,p1.total_payment,c2.map_location FROM job_assign j1,delivery_boy db1,post p1,customer_reg c1,customer_address c2,area a1,collection_time c3,mail_type m1,city c4 where j1.post_id=p1.id and j1.delivery_boy_id=db1.db_id and p1.sender_id=c1.id and p1.collection_address=c2.ca_id and c2.area_id=a1.aid and p1.collection_time=c3.id and p1.mail_type=m1.id and c2.city_id=c4.city_id and j1.id=? order by j1.id desc) as tb LEFT JOIN delivery_images di1 on tb.job_id=di1.job_id and di1.status='barcode'");
+        $stmt->bind_param("i", $job_id);
+        $stmt->execute();
+        $joblist = $stmt->get_result();
+        $stmt->close();
+        return $joblist;
+
+
+    }
+
+    // get total job
+    public function get_total_job($deliveryboy_id,$start_date,$end_date)
+    {
+
+        $today=date("Y-m-d");
+        
+        
+        $stmt = $this->con->prepare("SELECT j1.id as job_id,p1.id as post_id,p1.receiver_name,c1.name as sender_name,c1.contact as sender_phone,m1.mail_type,p1.acknowledgement,p1.collection_address,p1.priority, date_format(p1.dispatch_date,'%d-%m-%Y') as dispatch_date, time_format(c3.start_time,'%h:%i %p') as collection_start_time, time_format(c3.end_time,'%h:%i %p') as collection_end_time,j1.job_status,c2.address_label,c2.house_no,c2.street,a1.area_name,c2.pincode,(p1.delivery_charge - p1.discount) as total_payment,p1.basic_charges,p1.ack_charges,p1.total_charges,p1.discount,p1.delivery_charge,p1.post_status,p1.payment_status, date_format(p1.collection_date,'%d-%m-%Y') as collection_date, p1.weight FROM job_assign j1,delivery_boy db1,post p1,customer_reg c1,customer_address c2,area a1,collection_time c3,mail_type m1 where j1.post_id=p1.id and j1.delivery_boy_id=db1.db_id and p1.sender_id=c1.id and p1.collection_address=c2.ca_id and c2.area_id=a1.aid and p1.collection_time=c3.id and p1.mail_type=m1.id and db1.db_id=? and job_status='dispatched' and str_to_date(p1.dispatch_date ,'%Y-%m-%d')>=str_to_date('".$start_date."','%Y-%m-%d') and  str_to_date(p1.dispatch_date ,'%Y-%m-%d')<=str_to_date('".$end_date."','%Y-%m-%d') order by j1.id desc;");
+        // added (p1.delivery_charge - p1.discount) as total_payment which is actual delivery boys total earning in the app
+        $stmt->bind_param("i", $deliveryboy_id);
+        $stmt->execute();
+        $joblist = $stmt->get_result();
+        $stmt->close();
+        return $joblist;
+
+    }
+    
 
     //get city list
     public function get_city_list()
@@ -247,11 +327,13 @@ public function update_order_status($pid,$status,$payment_status)
 
         $stmt = $this->con->prepare("UPDATE `post` SET post_status = ?,payment_status=? where id = ?");
         $stmt->bind_param("ssi", $status,$payment_status, $pid);
+        
     }
     else
     {
         $stmt = $this->con->prepare("UPDATE `post` SET post_status = ? where id = ?");
         $stmt->bind_param("si", $status, $pid);
+       
     }
    
     
@@ -276,30 +358,50 @@ public function post_data($post_id)
 
 }
 
+
+//get_privacy 
+public function get_privacy()
+{
+    $stmt = $this->con->prepare("select * from privacy_policy where `type`='delivery'");
+    $stmt->execute();
+    $results = $stmt->get_result();
+    $stmt->close();
+    return $results;
+}
+
+// get_terms
+public function get_terms()
+{
+    $stmt = $this->con->prepare("select * from termsandcondition where `type`='delivery'");
+    $stmt->execute();
+    $results = $stmt->get_result();
+    $stmt->close();
+    return $results;
+}
+
+
 //  get amount 
 public function get_amount($weight,$mail_type)
 {
 
-    //echo "SELECT * FROM mail_type m1,mail_type_tariff m2 WHERE m2.mail_type=m1.id and m1.id=1";
-    $stmt = $this->con->prepare("SELECT * FROM mail_type m1,mail_type_tariff m2 WHERE m2.mail_type=m1.id and m1.id=?");
+   $stmt = $this->con->prepare("SELECT m2.amount FROM mail_type m1,mail_type_tariff m2 WHERE m2.mail_type=m1.id and m2.gm_from<=$weight and m2.gm_to>=$weight and  m1.id=?");
+  
     $stmt->bind_param("i", $mail_type);
     $stmt->execute();
     $post_data = $stmt->get_result();
     $stmt->close();
-    while($mail_amount=mysqli_fetch_array($post_data))
+    
+    if($mail_amount=mysqli_fetch_array($post_data))
     {
-        
-        if($weight>=$mail_amount["gm_from"] && $weight<=$mail_amount["gm_to"])
-        {
             $basic_charges=$mail_amount["amount"];
-        }
-        else
-        {
-            $basic_charges=0;
-        }
     }
+    else
+    {
+            $basic_charges=0;
+    }
+    
+    
     return $basic_charges;
-   
 
 }
     //---------------------------------------//
@@ -390,25 +492,8 @@ public function get_amount($weight,$mail_type)
         return $affected;
     }
 
-    // get_terms by jay
-    public function get_terms()
-    {
-        $stmt = $this->con->prepare("select * from termsandcondition where `type`='delivery'");
-        $stmt->execute();
-        $results = $stmt->get_result();
-        $stmt->close();
-        return $results;
-    }
-
-    //get_privacy by jay
-    public function get_privacy()
-    {
-        $stmt = $this->con->prepare("select * from privacy_policy where `type`='delivery'");
-        $stmt->execute();
-        $results = $stmt->get_result();
-        $stmt->close();
-        return $results;
-    }
+   
+   
 
 
 
@@ -435,37 +520,91 @@ public function get_amount($weight,$mail_type)
     }
 
 
+
+
+//change_password       //added by jay 23-04-23
+
+    public function change_password($cur_password,$new_password,$uid,$action)
+    {
+
+
+        $stmt=$this->con->prepare("SELECT * FROM `delivery_boy` WHERE binary password=? and db_id=?");
+        $stmt->bind_param("si", $cur_password,$uid);
+        $stmt->execute();
+         $stmt->store_result();
+        $num_rows = $stmt->num_rows;
+        $stmt->close();
+        
+        
+        
+        if($num_rows>0)
+        {
+            
+             $stmt1=$this->con->prepare("update delivery_boy set password=? where db_id=?");
+             $stmt1->bind_param("si", $new_password,$uid);
+             $stmt1->execute();
+             $affected=$stmt1->affected_rows;
+             $stmt1->close();
+        }
+       
+        
+        
+        return $num_rows;
+       
+       
+
+    }
+
+
+
    
 
-//accept /reject job
+//accept /reject job        //added
 
     public function job_action($job_id,$status)
     {
 
         if($status=="accept" || $status=="reject")
         {
-            $stmt = $this->con->prepare("update job_assign set job_status=? where id=? and job_status='pending'");
+            $stmt = $this->con->prepare("update job_assign set job_status=? where id=? and job_status='pending'");						
         }
-        else
+		else
         {
-            $stmt = $this->con->prepare("update job_assign set job_status=? where id=?");
+            $stmt = $this->con->prepare("update job_assign set job_status=? where id=?");			
         }
       
         $stmt->bind_param("si",$status,$job_id);
         $stmt->execute();
-         $affected=$stmt->affected_rows;
-        
+        $affected=$stmt->affected_rows;
         $stmt->close();
+		
         return $affected > 0;
 
     }
+    
+   /* public function post_status_update($post_id,$job_status)
+    {
+    
+      $stmt = $this->con->prepare("update post set post_status=? where id=?");
+        
+        
+        $stmt->bind_param("si",$job_status,$post_id);
+        $stmt->execute();
+         $affected=$stmt->affected_rows;
+       
+        $stmt->close();
+        return $affected > 0;
+    
+    }*/
+    
+    
 
 // update multiple job status
     public function job_update($p_id,$status,$job_id)
     {
 
-        
-        $stmt = $this->con->prepare("update job_assign set job_status=? where post_id=? and id!=?");
+       // added and condition by Jay 21-04-23 so that delivery boy who rejected doesnt get overwrite
+        $stmt = $this->con->prepare("update job_assign set job_status=? where post_id=? and id!=? and job_status='pending'");
         
         
         $stmt->bind_param("sii",$status,$p_id,$job_id);
@@ -473,6 +612,23 @@ public function get_amount($weight,$mail_type)
          $affected=$stmt->affected_rows;
         /*$stmt->store_result();
         $num_rows = $stmt->num_rows;*/
+        $stmt->close();
+        return $affected > 0;
+
+    }
+    
+    // update job status -> reject
+      public function job_assign_update($status,$job_id)
+    {
+
+        
+        $stmt = $this->con->prepare("update job_assign set job_status=? where id=?");
+        
+        
+        $stmt->bind_param("si",$status,$job_id);
+        $stmt->execute();
+         $affected=$stmt->affected_rows;
+       
         $stmt->close();
         return $affected > 0;
 
@@ -500,7 +656,7 @@ public function get_amount($weight,$mail_type)
     {
         //$status='off';
          
-       
+        
         $stmt = $this->con->prepare("INSERT INTO `delivery_boy_avalibility`(`delivery_boy_id`, `status`,`reason`) VALUES (?,?,?)");
         $stmt->bind_param("iss", $dbid,$status,$reason);
        
@@ -515,13 +671,13 @@ public function get_amount($weight,$mail_type)
 
     }
 
-     // add lcoation
-     public function update_weight($post_id,$weight,$basic_charges,$total_charges)
+     // update weight
+     public function update_weight($post_id,$weight,$basic_charges,$total_charges,$total_payment,$discount,$coupon_id)
     {
        
-         
-        $stmt = $this->con->prepare("UPDATE `post` SET `weight`=?,basic_charges=?,total_payment=?,total_charges=? where id=?");
-        $stmt->bind_param("dsssi",  $weight,$basic_charges,$total_charges,$total_charges,$post_id);
+        
+        $stmt = $this->con->prepare("UPDATE `post` SET `weight`=?,basic_charges=?,total_payment=?,total_charges=?,discount=?,`coupon_id`=? where id=?");
+        $stmt->bind_param("dssssii",  $weight,$basic_charges,$total_payment,$total_charges,$discount,$coupon_id,$post_id);
        
         $result = $stmt->execute();
         $affected=$stmt->affected_rows;
@@ -672,10 +828,9 @@ public function get_amount($weight,$mail_type)
     //insert delivery image
     public function add_delivery_image($job_id,$MainFileName,$status)
     {
-        $datetime=date("Y-m-D h:i A");
-        
-        $stmt = $this->con->prepare("INSERT INTO `delivery_images`(`job_id`, `image`,`status`,`datetime`) VALUES (?,?,?,?)");
-        $stmt->bind_param("isss", $job_id,$MainFileName,$status,$datetime);
+       
+        $stmt = $this->con->prepare("INSERT INTO `delivery_images`(`job_id`, `image`,`status`) VALUES (?,?,?)");
+        $stmt->bind_param("iss", $job_id,$MainFileName,$status);
        
         $result = $stmt->execute();
         $stmt->close();
@@ -702,51 +857,7 @@ public function get_amount($weight,$mail_type)
 
     }
 
-    //update password
-    public function update_Password($cpass, $npass, $id)
-    {
-
-        $date_time = date("Y-m-D h:i A");
-        $operation = 'Updated';
-        $type = 'Normal';
-
-        $stmt1 = $this->con->prepare("select password from delivery_boy where id=? and password=? ");
-        $stmt1->bind_param("is", $id, $cpass);
-        $result1 = $stmt1->execute();
-        $stmt1->store_result();
-        $password = $stmt1->num_rows;
-
-        if ($password > 0) {
-            $stmt = $this->con->prepare("update delivery_boy set password=? where id=? ");
-            $stmt->bind_param("si", $npass, $id);
-            $result = $stmt->execute();
-            $stmt->close();
-            if ($result) {
-                return 0;
-            } else {
-                return 1;
-            }
-        } else {
-            return 2;
-        }
-
-    }
-
-    //insert into domail
-
-public function insertinto_domail($cid,$vid,$oid,$order_status,$status)
-    {
-        $datetime=date("Y-m-D h:i A");
-        $stmt = $this->con->prepare("insert into domail (`customerid`, `vendorid`, `orderid`, `type`, `status`, `datetime`) values(?,?,?,?,?,?)");
-        $stmt->bind_param("iiisss",$cid,$vid,$oid,$order_status,$status,$datetime);
-        $result = $stmt->execute();
-        $stmt->close();
-        if ($result) {
-            return 0;
-        } else {
-            return 1;
-        }
-    }
+   
 
 
     //insert notification
@@ -767,36 +878,90 @@ public function insertinto_domail($cid,$vid,$oid,$order_status,$status)
         }
 
     }
-    // get order ready status
-     public function get_order_ready_status($o_id)
+
+    //  get coupon discount 
+public function get_discount($coupon_id,$tot_charges,$total_del_charge)
+{
+
+    
+    $stmt = $this->con->prepare("select * from coupon where c_id=?");
+    $stmt->bind_param("i",$coupon_id);
+    $stmt->execute();
+    $res_coupon = $stmt->get_result();
+    $stmt->close();
+
+    $row_num = mysqli_num_rows($res_coupon);
+
+         
+        if ($row_num > 0) {
+            $date = date('Y-m-d');
+            $p_row = mysqli_fetch_array($res_coupon);
+            $start_date = $p_row['start_date'];
+            $end_date = $p_row['end_date'];
+            $discount = $p_row['discount'];
+            $max_discount_amount = $p_row['max_discount'];
+            $min_amount = $p_row['min_amount'];
+            $percentage = $p_row["discount"];
+            
+            $paymentDate = date('Y-m-d', strtotime($date));
+            //echo $paymentDate; // echos today! 
+            $contractDateBegin = date('Y-m-d', strtotime($start_date));
+            $contractDateEnd = date('Y-m-d', strtotime($end_date));
+
+           
+            if ((strtotime($date) >= strtotime($start_date)) && (strtotime($date) <= strtotime($end_date))) {
+
+                if ($tot_charges >= $min_amount) {
+
+                    // $amount_discount1 = $total_amt * $discount;
+                    // $amount_discount = $amount_discount1 / 100;
+                    $amount_discount1 = $total_del_charge * $discount;
+                    $amount_discount = $amount_discount1 / 100.0;
+
+                    if ($amount_discount < $max_discount_amount) {
+                        $final_discount = $amount_discount;
+                        //$final_amount = $total_amt - $final_discount;
+                       
+                        return $final_discount;
+                    } else {
+
+                        $final_discount = $max_discount_amount;
+                        //$final_amount = $total_amt - $final_discount;
+                        
+                        return $final_discount;
+                    }
+                } else {
+                    return 2;
+                }
+            } else {
+                return 1;
+            }
+        } else {   
+            return 1;
+        }
+    
+
+
+}
+    
+//update coupon counter
+    public function update_counter($cust_id,$coupon_id)
     {
 
-        
-        $stmt = $this->con->prepare("SELECT * FROM order_ready WHERE order_id =?  order by id desc limit 1");
-        $stmt->bind_param("s", $o_id);
-        $stmt->execute();
-        $result=$stmt->get_result()->fetch_assoc();
-        
+       
+        $stmt = $this->con->prepare("update coupon_counter set counter=counter+1 where customer_id=? and coupon_id=?");
+        $stmt->bind_param("ii",$cust_id,$coupon_id);
+        $result = $stmt->execute();
+       
         $stmt->close();
-        return $result;
+
+        if ($result) {
+            return 1;
+        } else {
+            return 0;
+        }
 
     }
-
-    // get account data
-    public function get_account($db_id,$from_date,$to_date)
-    {
-
-
-        $stmt = $this->con->prepare("SELECT count(*) as total_job,sum(o1.delivery_boy_amount) as delivery_boy_amount,sum(o1.myct_delivery_amount) as myct_delivery_amount,sum(o1.ex_charge) as total_delivery_charge FROM `job_assign` j1,ordr o1,delivery_boy d1 WHERE j1.order_id=o1.id and j1.delivery_boy_id=d1.id and j1.job_status='deliver'  and (o1.stats='Confirmed' or o1.stats='Dispatched' or o1.stats='Delivered') and j1.delivery_boy_id=?  and ( str_to_date(o1.collect_date,'%Y-%m-%d') >=str_to_date('".$from_date."','%Y-%m-%d') and   str_to_date(o1.collect_date,'%Y-%m-%d') <= str_to_date('".$to_date."','%Y-%m-%d')) order by j1.id");
-        $stmt->bind_param("i", $db_id);
-        $stmt->execute();
-        $account_data = $stmt->get_result();
-        $stmt->close();
-        return $account_data;
-
-
-    }
-
   
 }
     

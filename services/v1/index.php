@@ -16,7 +16,6 @@ $app = new \Slim\Slim();
 /*function smtpmailer($to, $from, $from_name, $subject, $body,$username,$password)
 {
 
-
     global $error;
     $mail = new PHPMailer();
     $mail->IsSMTP();
@@ -52,6 +51,466 @@ $app = new \Slim\Slim();
         return 1;
     }
 }*/
+
+
+
+/* *
+ *  get coupon list customerwise (by Jay 14-4-23)
+ * Parameters: sender_id
+ * Method: POST
+ * 
+ */
+
+$app->post('/coupon_list1', function () use ($app) {
+    verifyRequiredParams(array('data'));
+    $data = json_decode($app->request->post('data'));
+    $sender_id = $data->sender_id;
+   
+    $db = new DbOperation();
+    $data = array();
+    $data["data"] = array();
+
+   
+    $result=$db->coupon_list1($sender_id);
+    
+    while ($row = $result->fetch_assoc()) {
+        $temp = array();
+        foreach ($row as $key => $value) {
+            $temp[$key] = $value;
+        }
+        $temp = array_map('utf8_encode', $temp);
+        array_push($data['data'], $temp);
+    }
+
+    $data['message'] = "";
+    $data['success'] = true;
+   
+    echoResponse(200, $data);
+});
+
+
+
+
+/* *
+ *  Add customer Address (by Jay 4-4-23)
+ * Parameters: cust_id,address_label,house_no,street,area_id,city_id,pincode
+ * Method: POST
+ * 
+ */
+
+$app->post('/add_customer_address', function () use ($app) {
+    verifyRequiredParams(array('data'));
+    $data = json_decode($app->request->post('data'));
+    $cust_id = $data->cust_id;
+    $address_label = $data->address_label;
+    $house_no = $data->house_no;
+    $street = $data->street;
+    $area_id = $data->area_id;
+	$city_id = $data->city_id;
+	$pincode = $data->pincode;
+    $action='added';
+    $db = new DbOperation();
+    $data = array();
+    $data["data"] = array();  
+    $res_customer_address=$db->add_customer_address($cust_id,$address_label,$house_no,$street,$area_id,$city_id,$pincode,$action);
+    if($res_customer_address>0)
+    {
+		$data['message'] = "Your new address added successfully";
+        $data['success'] = true;
+    }
+    else
+    {
+        $data['message'] = "An error occurred";
+        $data['success'] = false;
+    }
+    echoResponse(200, $data);
+});
+
+
+/* *
+ * get collection_time and delivery_date  -> added by nidhi
+ * Parameters: collection_date
+ * Method: POST
+ *
+ */
+
+$app->post('/get_collection_time', function () use ($app) {
+    verifyRequiredParams(array('data'));
+    $data = json_decode($app->request->post('data'));
+    $collection_date = $data->collection_date;
+    
+    $db = new DbOperation();
+    $data = array();
+    $data["data"] = array();
+    
+    $collection_date = date('Y-m-d',strtotime($collection_date));
+    
+    $result=$db->get_collection_time($collection_date);
+   
+    $collection_day=date('l',strtotime($collection_date));
+    $month=date('F',strtotime($collection_date));
+    $year=date('Y',strtotime($collection_date));
+    
+    if($collection_day!="Sunday"){
+        if($collection_day=="Monday" || $collection_day=="Tuesday" || $collection_day=="Wednesday" || $collection_day=="Thursday"){
+            $d_date = new DateTime($collection_date);
+            $d_date->modify('+1 day');
+            $delivery_date = $d_date->format('d-m-Y');
+        }  
+        else if($collection_day=="Friday"){
+            $dod_date = new DateTime($collection_date);
+            $dod_date->modify('+1 day');
+            $d_date = $dod_date->format('d-m-Y');
+            if(date('d-m-Y', strtotime("Second Saturday Of ".$month." {$year}"))==$d_date || date('d-m-Y', strtotime("Fourth Saturday Of ".$month." {$year}"))==$d_date)
+            {
+                $d_date = new DateTime($collection_date);
+                $d_date->modify('+3 day');
+                $delivery_date = $d_date->format('d-m-Y');      
+            }
+            else{
+                $delivery_date = $d_date;
+            }
+        }
+        else if($collection_day=="Saturday"){
+            $d_date = new DateTime($collection_date);
+            $d_date->modify('+2 day');
+            $delivery_date = $d_date->format('d-m-Y');
+        }
+    
+        while ($row = $result->fetch_assoc()) {
+            $temp = array();
+            foreach ($row as $key => $value) {
+                $temp[$key] = $value;
+            }
+    
+            $temp = array_map('utf8_encode', $temp);
+            array_push($data['data'], $temp);
+        }
+        $data['delivery_date'] = $delivery_date;
+        $data['message'] = "";
+        $data['success'] = true;
+    }
+    else{
+        $data['message'] = "Collection is closed on Sunday";
+        $data['success'] = false;
+    }
+    
+   
+    echoResponse(200, $data);
+});
+
+
+
+
+
+
+/* *
+ * Update customer Profile (by Jay 4-4-23)
+ * Parameters: name,password,id
+ * Method: POST
+ * 
+ */
+
+$app->post('/update_customer_profile', function () use ($app) {
+    verifyRequiredParams(array('data'));
+    $data = json_decode($app->request->post('data'));
+    $name = $data->name;
+    $password = $data->password;
+    $id = $data->id;
+    $action='updated';
+	
+    $db = new DbOperation();
+    $data = array();
+    $data["data"] = array();  
+    $res_customer_profile=$db->update_customer_profile($name,$password,$action,$id);
+    if($res_customer_profile>0)
+    {
+		$data['message'] = "Your profile updated successfully";
+        $data['success'] = true;
+    }
+    else
+    {
+        $data['message'] = "An error occurred";
+        $data['success'] = false;
+    }
+    echoResponse(200, $data);
+});
+
+
+// cancel post order (by Jay 8-4-23)
+$app->post('/cancel_post_order', function () use ($app) {
+    verifyRequiredParams(array('data'));
+    $data = json_decode($app->request->post('data'));
+    $pid = $data->pid;
+    
+    $action='updated';
+	
+    $db = new DbOperation();
+    $data = array();
+    $data["data"] = array();  
+    $res_cancel_post_order=$db->cancel_post_order($pid,$action);
+    if($res_cancel_post_order==1)
+    {
+        // send notification to admin
+        $adminstatus=1;
+        $adminplaystatus=1;
+        $noti_type="post_cancel";
+        $msg="Post has been cancelled by user";
+        $notification = $db->new_notification($noti_type, $res_customer,$msg,$adminstatus,$adminplaystatus);
+
+
+		$data['message'] = "Your post order cancelled";
+        $data['success'] = true;
+    }
+    else if($res_cancel_post_order==0)
+    {
+		$data['message'] = "Your post order cannot be cancelled as order is already porcessed";
+        $data['success'] = true;
+    }
+    else
+    {
+        $data['message'] = "An error occurred";
+        $data['success'] = false;
+    }
+    echoResponse(200, $data);
+});
+
+
+
+//get_all_order_customerwise (by Jay 8-4-2023)
+
+$app->post('/get_all_order_customerwise', function () use ($app) {
+   
+    
+	 verifyRequiredParams(array('data'));
+    $data = json_decode($app->request->post('data'));
+    $cid = $data->cid;
+   
+
+    $db = new DbOperation();
+    $data = array();
+    $data["data"] = array();
+
+    
+    $result=$db->get_all_order_customerwise($cid);
+    
+     $num=$result->num_rows;
+     if($num>0)
+     {
+          while ($row = $result->fetch_assoc()) {
+        $temp = array();
+        foreach ($row as $key => $value) {
+            $temp[$key] = $value;
+        }
+        $temp = array_map('utf8_encode', $temp);
+        array_push($data['data'], $temp);
+    }
+
+        $data['message'] = "";
+        $data['success'] = true;
+     }
+     else
+     {
+        $data['message'] = "No order history found!";
+        $data['success'] = true;
+         
+     }
+    
+   
+    
+    echoResponse(200, $data);
+});
+
+
+//get_all_order_customerwise (by Jay 8-4-2023)
+
+$app->post('/get_post_order_details', function () use ($app) {
+   
+    
+	 verifyRequiredParams(array('data'));
+    $data = json_decode($app->request->post('data'));
+    $pid = $data->pid;
+   
+
+    $db = new DbOperation();
+    $data = array();
+    $data["data"] = array();
+
+    
+    $result=$db->get_post_order_details($pid);
+    $result_image=$db->post_image($pid);
+    $num=$result->num_rows;
+    
+   
+   
+     if($num>0)
+     {
+         $temp = array();
+          while ($row = $result->fetch_assoc()) {
+        
+        foreach ($row as $key => $value) {
+            
+            if($key=="profile_pic" && $value!="")
+            {
+                 $temp[$key] = "https://mykapot.com/mykapotroot555/deliveryboy_id/".$value;
+                
+            }
+            else
+            {
+                $temp[$key] = $value;
+            }    
+        }
+        $temp = array_map('utf8_encode', $temp);
+        
+    }
+    if($result_image["image"]!="")
+    {
+       
+         $temp["post_image"]="https://mykapot.com/mykapotroot555/post_images/".$result_image["image"];
+    }
+    else
+    {
+        $temp["post_image"]="";
+    }
+       
+        array_push($data['data'], $temp);
+        $data['message'] = "";
+        $data['success'] = true;
+     }
+     else
+     {
+        $data['message'] = "No Post order found!";
+        $data['success'] = true;
+         
+     }
+    
+   
+    
+    echoResponse(200, $data);
+});
+
+
+/*
+*get customer address list
+params:cust_id
+method:post
+*/
+$app->post('/get_customer_address', function () use ($app) {
+    verifyRequiredParams(array('data'));
+    $data = json_decode($app->request->post('data'));
+    $cid = $data->cid;
+   
+
+    $db = new DbOperation();
+    $data = array();
+    $data["data"] = array();
+
+    
+    $result=$db->get_customer_address($cid);
+    
+     $num=$result->num_rows;
+     if($num>0)
+     {
+        while ($row = $result->fetch_assoc()) {
+        $temp = array();
+            foreach ($row as $key => $value) {
+                $temp[$key] = $value;
+            }
+            $temp = array_map('utf8_encode', $temp);
+            array_push($data['data'], $temp);
+        }
+
+        $data['message'] = "";
+        $data['success'] = true;
+     }
+     else
+     {
+        $data['message'] = "No order history found!";
+        $data['success'] = true;
+         
+     }
+    
+   
+    
+    echoResponse(200, $data);
+});
+
+/*
+*delete customer address
+params:address_id
+method:post
+*/
+$app->post('/delete_customer_address', function () use ($app) {
+    verifyRequiredParams(array('data'));
+    $data = json_decode($app->request->post('data'));
+    $address_id = $data->address_id;
+   
+
+    $db = new DbOperation();
+    $data = array();
+    $data["data"] = array();
+
+    
+    $result=$db->delete_customer_address($address_id);
+    
+    
+     if($result>0)
+     {
+        
+
+        $data['message'] = "Address deleted successfully";
+        $data['success'] = true;
+     }
+     else
+     {
+        $data['message'] = "No order history found!";
+        $data['success'] = true;
+         
+     }
+    
+   
+    
+    echoResponse(200, $data);
+});
+
+
+
+/* *
+ * Update customer address (by Rachna 18-4-23)
+ * Parameters: cust_id,address_id,address_label,house_no,street,area_id,city_id,pincode
+ * Method: POST
+ * 
+ */
+
+$app->post('/update_customer_address', function () use ($app) {
+    verifyRequiredParams(array('data'));
+    $data = json_decode($app->request->post('data'));
+    $cust_id = $data->cust_id;
+    $address_id = $data->address_id;
+    $address_label = $data->address_label;
+    $house_no = $data->house_no;
+    $street = $data->street;
+    $area_id = $data->area_id;
+    $city_id = $data->city_id;
+    $pincode = $data->pincode;
+    $action='updated';
+    
+    $db = new DbOperation();
+    $data = array();
+    $data["data"] = array();  
+    $res_customer_profile=$db->update_customer_address($address_id,$cust_id,$address_label,$house_no,$street,$area_id,$city_id,$pincode,$action);
+    if($res_customer_profile>0)
+    {
+        $data['message'] = "Your address updated successfully";
+        $data['success'] = true;
+    }
+    else
+    {
+        $data['message'] = "An error occurred";
+        $data['success'] = false;
+    }
+    echoResponse(200, $data);
+});
 
 
 
@@ -110,6 +569,9 @@ $app->post('/customer_reg', function () use ($app) {
 });
 
 
+
+
+
 /* *
  * add post 
  * Parameters: name,address,education,stu_type(level),enrollment_dt,skill_id,course_id,
@@ -139,15 +601,36 @@ $app->post('/add_post', function () use ($app) {
     $ack_charges = $data->ack_charge;
     $coupon_id = $data->coupon;
     $discount = $data->discount;
+    
+     
+   // added by Rachna
+    $total_charges=isset($data->total_charges)?$data->total_charges:($data->total_amt);
     $total_payment = $data->total_amt;
-    $total_charges=($basic_charge+$ack_charges+$delivery_charge)-$discount;
+  
+    $collection_date = isset($data->collection_date)?$data->collection_date:""; 
 
-    $status='enable';
+  //  $status='enable';  -> removed by jay 16-04-23
     $action='added';
     $db = new DbOperation();
     $data = array();
     $data["data"] = array();  
-    if($db->add_post($receiver_name,$sender,$house,$street,$area,$city,$pincode,$mail_type,$weight,$ack,$priority,$coll_address,$coll_time,$dispatch_date,$basic_charge,$delivery_charge,$ack_charges,$total_charges,$coupon_id,$discount,$total_payment))
+    
+     //Added by jay
+    
+    if($ack==2 || $ack=="yes")
+    {
+        $ack="yes";
+    }
+    else
+    {
+        $ack="no";
+    }
+    
+    
+    
+    // 
+    
+    if($db->add_post($receiver_name,$sender,$house,$street,$area,$city,$pincode,$mail_type,$weight,$ack,$priority,$coll_address,$coll_time,$dispatch_date,$basic_charge,$delivery_charge,$ack_charges,$total_charges,$coupon_id,$discount,$total_payment,$collection_date))
     {
 
         $data['message'] = "Post added successfully";
@@ -161,6 +644,10 @@ $app->post('/add_post', function () use ($app) {
        
     echoResponse(200, $data);
 });
+
+
+
+
 
 /* *
  * city list
@@ -195,6 +682,47 @@ $app->post('/city_list', function () use ($app) {
     
     echoResponse(200, $data);
 });
+
+
+
+/* *
+ * area and pincode list
+ * Parameters: 
+ * Method: POST
+ * 
+ */
+
+$app->post('/area_list', function () use ($app) {
+      verifyRequiredParams(array('data'));
+    $data = json_decode($app->request->post('data'));
+    $ct_id = $data->ct_id;
+    $db = new DbOperation();
+    $data = array();
+    $data["data"] = array();
+
+    
+    $result=$db->area_list($ct_id);
+    
+     
+    
+    while ($row = $result->fetch_assoc()) {
+        $temp = array();
+        foreach ($row as $key => $value) {
+            $temp[$key] = $value;
+        }
+        $temp = array_map('utf8_encode', $temp);
+        array_push($data['data'], $temp);
+    }
+
+    $data['message'] = "";
+    $data['success'] = true;
+    
+    echoResponse(200, $data);
+});
+
+
+
+
 
 
 /* *
@@ -355,7 +883,7 @@ $app->post('/login', function () use ($app) {
     $db = new DbOperation();
     $data = array();
     
-
+  $response = array();
    
     if ($db->customerLogin($email, $password)) 
     {
@@ -376,7 +904,7 @@ $app->post('/login', function () use ($app) {
             $data['success'] = true;
         }
         else{
-            $data["data"]=$response;
+            $data["data"]=null;  // added by jay 16-04-23
             $data["success"] = false;
             $data["message"]="User is disabled!";
         }
@@ -388,9 +916,9 @@ $app->post('/login', function () use ($app) {
     }
     else
     {
-        $data['success'] = false;
-
-            $data['message'] = "Invalid username or password";
+         $data["data"]=null;  // added by jay 16-04-23
+        $data["success"] = false;
+        $data["message"] = "Invalid username or password";
 
     }
     
@@ -399,6 +927,235 @@ $app->post('/login', function () use ($app) {
     echoResponse(200, $data);
 });
 
+
+/* *
+ * user profile
+ * Parameters: uid
+ * Method: POST
+ * by jay 21-04-23
+ */
+
+
+
+$app->post('/get_profile', function () use ($app) {
+    verifyRequiredParams(array('data'));
+    $data = json_decode($app->request->post('data'));
+    $uid = $data->uid;
+    $db = new DbOperation();
+    $result = $db->get_profile($uid);
+    $response = array();
+    $flag=false;
+    $response['data'] = array();
+     $temp = null;
+    while ($row = $result->fetch_assoc()) {
+        $temp = new stdClass();
+        $flag=true;
+        foreach ($row as $key => $value) {
+            $temp->$key = $value;
+        }
+      
+       
+    }
+    
+    
+    $response['result'] = $flag;
+    $response["data"]=$temp;
+    echoResponse(200, $response);
+});
+
+
+
+
+
+/*
+*name:update weight
+*param:deliveryboy_id
+method:post
+*/
+$app->post('/get_charges', function () use ($app) {
+
+    verifyRequiredParams(array('data'));
+    $data = json_decode($app->request->post('data'));
+    $mail_type = $data->mail_type;
+    $weight=$data->weight;
+    $ack_charges=$data->ack_charges;
+    $coupon_id=isset($data->coupon_id)?$data->coupon_id:"0";
+    
+    $db = new DbOperation();
+    $data = array();
+    $data["data"] = array();
+    $response = array();
+    $temp=array();
+    
+    //Patch code by jay
+    
+   /* if($ack_charges==1)
+    {
+        $ack_charges=2;
+    }
+    else
+    {
+        $ack_charges=0;
+    }*/
+    
+    
+    // pactch code over
+    
+
+    // get delivery charges
+    $del_charges=$db->get_delivery_charges();
+    
+    // calculate charges
+   $get_amount=$db->get_amount($weight,$mail_type);
+
+
+   $tot_charges=$get_amount+$ack_charges+$del_charges["minimum_delivery_charge"];
+   
+  // $total_del_charge=$ack_charges+$del_charges["minimum_delivery_charge"]; by jay
+   $total_del_charge=$del_charges["minimum_delivery_charge"];
+   // get discount
+   if($coupon_id!="")  // doubt
+   {
+    $get_discount=$db->get_discount($coupon_id,$tot_charges,$total_del_charge);
+    if($get_discount==1)
+    {
+        $data['coupon_message'] = "Invalid Coupon Code";
+         $discount=0;
+    }
+    else if ($get_discount==2)
+    {
+        $data['coupon_message']="Amount is too small";
+         $discount=0;
+    }
+    else
+    {
+
+     $discount=$get_discount;
+    }
+   }
+   else
+   {
+    $discount=0;
+   }
+   if($get_amount>0)
+   {
+        $basic_charges=$get_amount;
+        $total_payable=($del_charges["minimum_delivery_charge"]+$ack_charges+$basic_charges)-$discount;
+        $total_charges=($del_charges["minimum_delivery_charge"]+$ack_charges+$basic_charges);
+       
+            $data['result'] = true;
+            $data['message'] = "";
+            $temp['total_charges']=$total_charges;
+            $temp['basic_charges']=$basic_charges;
+            $temp['discount']=$discount;
+            $temp['delivery_charge']=$del_charges["minimum_delivery_charge"];
+            $temp['handling_charges']=$ack_charges; // added by jay
+            $temp['total_payable']=$total_payable; // added by jay
+            $data['data']=$temp;
+            
+       
+   }
+   else
+   {
+        $data['result'] = false;
+        $data['message'] = "Weight not available";
+   }
+    
+
+    echoResponse(200, $data);
+});
+
+
+/* get privacy policy
+method:get
+parmas:
+
+*/
+$app->get('/get_privacy', function () use ($app) {
+    // get_faq
+    $db = new DbOperation();
+    $result = $db->get_privacy();
+    $response = array();
+    $response['result'] = false;
+    $response['data'] = array();
+    while ($row = $result->fetch_assoc()) {
+        $temp = array();
+        foreach ($row as $key => $value) {
+            $temp[$key] = $value;
+        }
+        $temp = array_map('utf8_encode', $temp);
+        array_push($response['data'], $temp);
+    }
+    echoResponse(200, $response);
+});
+
+
+
+/*
+ *  terms and conditions
+ * Parameters:
+ * Method: get
+ 
+*/
+
+
+$app->get('/get_terms', function () use ($app) {
+    // get_faq
+    $db = new DbOperation();
+    $result = $db->get_terms();
+    $response = array();
+    $response['result'] = false;
+    $response['data'] = array();
+    while ($row = $result->fetch_assoc()) {
+        $temp = array();
+        foreach ($row as $key => $value) {
+            $temp[$key] = $value;
+        }
+        $temp = array_map('utf8_encode', $temp);
+        array_push($response['data'], $temp);
+    }
+    echoResponse(200, $response);
+});
+
+
+/* *
+ *  Add post review (by Rachna 19-4-23)
+ * Parameters: post_id,rating,review
+ * Method: POST
+ * 
+ */
+
+$app->post('/add_post_review', function () use ($app) {
+    verifyRequiredParams(array('data'));
+    $data = json_decode($app->request->post('data'));
+    $post_id = $data->post_id;
+    $rating = $data->rating;
+    $review = $data->review;
+   
+    $action='added';
+    $db = new DbOperation();
+    $data = array();
+    $data["data"] = array();  
+    $res_customer_review=$db->add_post_review($post_id,$rating,$review,$action);
+    if($res_customer_review>0)
+    {
+        $data['message'] = "Your new review added successfully";
+        $data['success'] = true;
+    }
+    else
+    {
+        $data['message'] = "An error occurred";
+        $data['success'] = false;
+    }
+    echoResponse(200, $data);
+});
+
+
+
+
+
+
+//-----------------------------------//
 
 /* *
  * faculty list
@@ -1386,763 +2143,6 @@ Om Sai Ram .";
 
 
 
-/*
-*food request for needy
-*param: cid
-*method:post
-*/
-
-$app->post('/food_request', function () use ($app) {
-    verifyRequiredParams(array('data'));
-    $data = array();
-    $request_data = json_decode($app->request->post('data'));
-    $reference_contact=$request_data->reference_contact;
-    $child_below_six=$request_data->child_below_six;
-    $children=$request_data->children;
-    $adults=$request_data->adults;
-    $senior_citizen=$request_data->senior_citizen;
-    $needy_contact=$request_data->needy_contact;
-    $order_type=$request_data->order_type;
-    $lat=$request_data->lat;
-    $long=$request_data->long;
-    $address=$request_data->address;
-    $distance=$request_data->distance;
-    $kitchen_id=$request_data->kitchen_id;
-    $device_token = isset($request_data->device_token)?$request_data->device_token:"";
-    $device_type = isset($request_data->type)?$request_data->type:"";
-    $date = Date('d/m/Y');
-    $time = Date('h:i a');
-    $image=$app->request->post('image');
-    $image_resp=array();
-
-    $db = new DbOperation();    
-    if (isset($_FILES["image"]["name"]) && $_FILES["image"]["name"] != "")
-    {
-                        
-        $i = 1;
-        $MainFileName = $_FILES["image"]["name"];
-        $milliseconds = round(microtime(true) * 1000);
-        $Arr = explode('.', $MainFileName);
-        $MainFileName = date("Ymd")  . $milliseconds. ".".$Arr[1];              
-   
-        $type="image";
-        
-        if($MainFileName!=""){
-            if(move_uploaded_file($_FILES["image"]["tmp_name"], "../../../saiUploads/" . $MainFileName))
-            {
-                      $image_resp["image_upload"] = true;
-            }
-            else
-            {
-                      $image_resp["image_upload"] =false;
-            }
-            
-        }
-    }
-    else
-    {
-        $MainFileName="";
-    }
-    // 2nd image
-    if (isset($_FILES["image2"]["name"]) && $_FILES["image2"]["name"] != "")
-    {
-                        
-        $i = 1;
-        $MainFileName2 = $_FILES["image2"]["name"];
-        $milliseconds2 = round(microtime(true) * 1000);
-        $Arr = explode('.', $MainFileName2);
-        $MainFileName2 = date("Ymd")  . $milliseconds2. ".".$Arr[1];              
-   
-        $type="image";
-        
-        if($MainFileName2!=""){
-            if(move_uploaded_file($_FILES["image2"]["tmp_name"], "../../../saiUploads/" . $MainFileName2))
-            {
-                      $image_resp["image_upload2"] = true;
-            }
-            else
-            {
-                      $image_resp["image_upload2"] =false;
-            }
-            
-        }
-
-    }
-    else
-    {
-       $MainFileName2=""; 
-    }
-
-
-    $delTime = strtotime("+45 minutes", strtotime($time));
-    $del_time=date('h:i a', $delTime);
-      
-    $user_order=$db->add_food_request($reference_contact,$child_below_six,$children,$adults,$senior_citizen,$needy_contact,$order_type,$lat,$long,$address,$distance,$MainFileName,$MainFileName2,$date,$del_time,$kitchen_id); 
-    if ($user_order > 0) {
-    $data['success'] = true;        
-    $data['message'] = "Request added successfully";  
-    $data['data']=$image_resp;
-
-    // insert notification
-     $notification=$db->add_aid_notification($user_order);
-         if($device_token!="")
-         {
-
-         
-            $insert_device = $db->insert_aid_user_device($user_order, $device_token, $device_type);
-        }
-    
-    }
-    else
-    {
-        $data['success'] = false;        
-        $data['message'] = "An error occurred!";
-        $data['data']=$image_resp;
-    }
-    
-    echoResponse(200, $data);
-
-});
-
-
-
-
-/*
-*food request for needy
-*param: cid
-*method:post
-*/
-
-$app->post('/advance_seva', function () use ($app) {
-    verifyRequiredParams(array('data'));
-    $data = array();
-    $request_data = json_decode($app->request->post('data'));
-    $reference_contact=$request_data->reference_contact;
-    
-    $device_token = isset($request_data->device_token)?$request_data->device_token:"";
-    $device_type = isset($request_data->type)?$request_data->type:"";
-    $date = $request_data->date;
-    $time = $request_data->time;
-    
-
-    $db = new DbOperation();
-     $user_order=$db->add_advance_seva($reference_contact,$date,$time);
-    if ($user_order > 0) {
-    $data['success'] = true;        
-    $data['message'] = "Request added successfully";  
-    
-
-   
-         if($device_token!="")
-         {
-
-         
-            $insert_device = $db->insert_aid_user_device($user_order, $device_token, $device_type);
-        }
-    
-    }
-    else
-    {
-        $data['success'] = false;        
-        $data['message'] = "An error occurred!";
-        $data['data']=$image_resp;
-    }
-    
-    echoResponse(200, $data);
-
-});
-/*
-* get counters value
-* param: none
-* method:POST
-*/
-
-$app->get('/get_counters', function () use ($app) {
-    // get_faq
-    $db = new DbOperation();
-    $result = $db->get_counters();
-    $response = array();
-    $response['success'] = true;
-    $response['data'] = array();
-    $response['message'] = "";  
-    
-    $kitchen=$db->get_kitchen_count();
-    $kitchen_count=$kitchen->fetch_assoc();
-    $meals_db=$db->get_meal_count();
-    $meals=$meals_db->fetch_assoc();
-    $volunteers_db=$db->get_volunteer_count();
-    $volunteers=$volunteers_db->fetch_assoc();
-    
-    while ($row = $result->fetch_assoc()) {
-        $temp = array();
-        foreach ($row as $key => $value) {
-            $temp[$key] = $value;
-        }
-        $temp = array_map('utf8_encode', $temp);
-        $temp["volunteers"]=$volunteers["volunteers"];
-        $temp["location"]=$kitchen_count["kitchen"];
-        $temp["meals"]=$meals["meals"]+145000;
-        array_push($response['data'], $temp);
-    }
-    echoResponse(200, $response);
-});
-
-
-/*
-* insert interested in seva 
-* param: phone
-* method:POST
-*/
-
-$app->post('/add_insterested_seva', function () use ($app) {
-    verifyRequiredParams(array('phone'));
-   
-    $phone = $app->request->post('phone');
-    $db = new DbOperation();
-    $result = $db->add_insterested_seva($phone);
-    $response = array();
-    $data['success'] = true;
-    $data['data'] = array();
-   
-    if ($result==1) {
-    $data['success'] = true;        
-    $data['message'] = "Request added successfully";  
-   
-    }
-    else if($result==2)
-    {
-        $data['success'] = true;        
-        $data['message'] = "Mobile No. already exists!";  
-    }
-    else
-    {
-        $data['success'] = false;        
-        $data['message'] = "An error occurred!";
-      
-    }
-
-    echoResponse(200, $data);
-});
-
-
-/*
-* get banners
-* param: none
-* method: GET
-
-*/
-$app->get('/get_banner', function () use ($app) {
-    // get_faq
-    $db = new DbOperation();
-    $result = $db->get_banner();
-    $response = array();
-    $response['success'] = true;
-    $response['data'] = array();
-    while ($row = $result->fetch_assoc()) {
-        $temp = array();
-        foreach ($row as $key => $value) {
-            $temp[$key] = $value;
-        }
-        $temp = array_map('utf8_encode', $temp);
-        array_push($response['data'], $temp);
-    }
-    echoResponse(200, $response);
-});
-
-
-
-
-/*
-* find nearby kitchen
-*param: pincode
-*method:post
-*/
-
-$app->post('/find_kitchen', function () use ($app) {
-    verifyRequiredParams(array('data'));
-    $data = array();
-    $request_data = json_decode($app->request->post('data'));
-    $pincode=$request_data->pincode;
-    $data['data'] = array();
-    $db = new DbOperation();
-     $kitchen=$db->find_kitchen($pincode);
-    
-    if (isset($kitchen->num_rows)) {
-         
-        while ($row = $kitchen->fetch_assoc()) {
-        $temp = array();
-        foreach ($row as $key => $value) {
-            $temp[$key] = $value;
-        }
-        $temp = array_map('utf8_encode', $temp);
-        array_push($data['data'], $temp);
-    }
-
-    $data['success'] = true;        
-    $data['message'] = "";  
-    
-
-    
-    }
-    else
-    {
-        $data['success'] = false;        
-        $data['message'] = "No kithcen found ";
-
-    }
-    
-    echoResponse(200, $data);
-
-});
-
-
-/*
-* find  kitchen from city
-*param: pincode
-*method:post
-*/
-
-$app->post('/find_kitchen_from_city', function () use ($app) {
-    verifyRequiredParams(array('data'));
-    $data = array();
-    $request_data = json_decode($app->request->post('data'));
-    $city_name=$request_data->city_name;
-    $pincode=$request_data->pincode;
-    $data['data'] = array();
-    $db = new DbOperation();
-    $kitchen=$db->find_kitchen_from_city($city_name,$pincode);
-    
-    if ($kitchen) {
-         
-        while ($row = $kitchen->fetch_assoc()) {
-        $temp = array();
-        foreach ($row as $key => $value) {
-            $temp[$key] = $value;
-        }
-        $temp = array_map('utf8_encode', $temp);
-        array_push($data['data'], $temp);
-    }
-
-    $data['success'] = true;        
-    $data['message'] = "";  
-    
-
-    
-    }
-    else
-    {
-        $data['success'] = false;        
-        $data['message'] = "No kithcen found ";
-
-    }
-    
-    echoResponse(200, $data);
-
-});
-
-
-/*
-*food request for needy
-*param: cid
-*method:post
-*/
-
-$app->post('/contact_us', function () use ($app) {
-    verifyRequiredParams(array('data'));
-    $data = array();
-    $request_data = json_decode($app->request->post('data'));
-    $name=$request_data->name;
-    $mobile=$request_data->mobile;
-    $email=$request_data->email;
-    $pincode=$request_data->pincode;
-    $address=$request_data->address;
-    $message=$request_data->message;
-
-    
-    $db = new DbOperation();
-   $contact_mail='<!DOCTYPE html>
-<html>
-<head>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <style>
-        * {
-            box-sizing: border-box;
-        }
-
-        ul {
-            list-style-type: none;
-            margin: 0;
-            padding: 0;
-            overflow: hidden;
-            color: #000000;
-
-        }
-
-        li {
-            float: left;
-        }
-
-        li a {
-            display: block;
-            color: white;
-            text-align: center;
-            padding: 14px 16px;
-            text-decoration: none;
-        }
-
-        li a:hover {
-        }
-        [class*="col-"] {
-            float: left;
-            padding: 5px;
-        }
-        html {
-            font-family: "Lucida Sans", sans-serif;
-        }
-
-        .logoRes img{
-            height: auto;
-            width: 50%;
-
-        }
-
-
-        @media only screen and (min-width: 150px) and (max-width: 600px){
-            .logoRes img{
-                height: auto;
-                width: 70%;
-
-            }
-
-        }
-        th {
-
-
-
-            padding: 2%;
-            font-size: 20px;
-
-        }
-        tr {
-
-            font-size: 18px;
-        }
-        td{
-            padding: 2%;
-
-            border: 2px solid #f4f4f4;
-        }
-
-        @media only screen and (max-width: 1250px) {
-
-
-            tr {
-                font-size: 14px;
-            }
-
-        }
-
-        @media only screen and (max-width: 800px) {
-            tr {
-                font-size: 12px;
-            }
-            .logoRes img{
-                height: auto;
-                width: 90%;
-
-            }
-
-        }
-        @media only screen and (max-width: 300px) {
-            tr {
-                font-size: 10px;
-            }
-            @media only screen and (max-width: 800px) {
-                tr {
-                    font-size: 12px;
-                }
-                .logoRes img{
-                    height: auto;
-                    width: 90%;
-
-                }
-            }
-        }
-
-    </style>
-</head>
-<body style=" background-color: #eaebec;margin-bottom: 5%">
-<div class="logoRes" >
-   </div>
-<div style="margin:0;padding:0" style=" background-color: #ffffff;">
-    <div style="width:100%;  ">
-        <table style="width:100%;empty-cells:show;margin:10px 0;background-color: white;" >
-            <thead>
-            <tr>
-                <th colspan="2" style="text-align:left;padding:10px;background-color: #005370;color: white">
-                    <h3 style="margin:0;padding:0">Details of Enquiry</h3>
-                </th>
-            </tr>
-            </thead>
-            <tbody>
-            <tr>
-                <td style="width:50%;padding:10px;background-color: #ebebf2">Name </td>
-
-
-                <td style="width:50%;padding:10px;color: #3B5998;"> '.$name.'</td>
-            </tr>
-
-            <tr>
-                <td style="width:50%;padding:10px;background-color: #ebebf2"> Mobile  </td>
-                <td style="width:50%;padding:10px;color: #3B5998"> '.$mobile.'</td>
-            </tr>
-            <tr>
-                <td style="width:50%;padding:10px;background-color: #ebebf2"> Email-Id </td>
-                <td style="width:50%;padding:10px;color: #3B5998"> '.$email.'</td>
-            </tr>
-            <tr>
-                <td style="width:50%;padding:10px;background-color: #ebebf2"> Address  </td>
-                <td style="width:50%;padding:10px;color: #3B5998"> '.$address.'</td>
-            </tr>
-            <tr>
-                <td style="width:50%;padding:10px;background-color: #ebebf2"> Pincode  </td>
-                <td style="width:50%;padding:10px;color: #3B5998"> '.$pincode.'</td>
-            </tr>
-            <tr>
-                <td style="width:50%;padding:10px;background-color: #ebebf2"> Message  </td>
-                <td style="width:50%;padding:10px;color: #3B5998"> '.$message.'</td>
-            </tr>
-
-            </tbody>
-        </table>
-</body>
-</html>
-';
-            
-    
-    $mail_resp = smtpmailer("info@annaseva.in", "info@annaseva.in", $name, "Contact Enquiry", $contact_mail, "info@annaseva.in", "m@2MhGTe*z&M");
-     $res_contact=$db->add_contact($name,$email,$mobile,$message,$address,$pincode);
-    if ($res_contact > 0) {
-    $data['success'] = true;        
-    $data['message'] = "Enquiry sent successfully";  
-    
-    
-    }
-    else
-    {
-        $data['success'] = false;        
-        $data['message'] = "An error occurred!";
-        
-    }
-    
-    echoResponse(200, $data);
-
-});
-
-
-/*
-* get all country list
-* param: none
-* method: GET
-
-*/
-$app->get('/get_allCountry', function () use ($app) {
-    // get_faq
-    $db = new DbOperation();
-    $result = $db->get_allCountry();
-    $response = array();
-    $response['success'] = true;
-    $response['data'] = array();
-    while ($row = $result->fetch_assoc()) {
-        $temp = array();
-        foreach ($row as $key => $value) {
-            $temp[$key] = $value;
-        }
-        $temp = array_map('utf8_encode', $temp);
-        array_push($response['data'], $temp);
-    }
-    echoResponse(200, $response);
-});
-
-
-/*
-* get all state list
-* param: none
-* method: GET
-
-*/
-$app->get('/get_allState', function () use ($app) {
-    // get_faq
-    $db = new DbOperation();
-    $result = $db->get_allState();
-    $response = array();
-    $response['success'] = true;
-    $response['data'] = array();
-    while ($row = $result->fetch_assoc()) {
-        $temp = array();
-        foreach ($row as $key => $value) {
-            $temp[$key] = $value;
-        }
-        $temp = array_map('utf8_encode', $temp);
-        array_push($response['data'], $temp);
-    }
-    echoResponse(200, $response);
-});
-
-
-
-/*
-* get country wise state list
-* param: none
-* method: GET
-
-*/
-$app->get('/get_country_state/:country_id', function ($country_id) use ($app) {
-    // get_faq
-    $db = new DbOperation();
-    $result = $db->get_country_state($country_id);
-    $response = array();
-    $response['success'] = true;
-    $response['data'] = array();
-    while ($row = $result->fetch_assoc()) {
-        $temp = array();
-        foreach ($row as $key => $value) {
-            $temp[$key] = $value;
-        }
-        $temp = array_map('utf8_encode', $temp);
-        array_push($response['data'], $temp);
-    }
-    echoResponse(200, $response);
-});
-
-
-
-/*
-* get state wise city list
-* param: none
-* method: GET
-
-*/
-$app->get('/get_state_city/:state_id', function ($state_id) use ($app) {
-    // get_faq
-    $db = new DbOperation();
-    $result = $db->get_state_city($state_id);
-    $response = array();
-    $response['success'] = true;
-    $response['data'] = array();
-    while ($row = $result->fetch_assoc()) {
-        $temp = array();
-        foreach ($row as $key => $value) {
-            $temp[$key] = $value;
-        }
-        $temp = array_map('utf8_encode', $temp);
-        array_push($response['data'], $temp);
-    }
-    echoResponse(200, $response);
-});
-
-
-/*
-* get all languages list
-* param: none
-* method: GET
-
-*/
-$app->get('/get_allLanguages', function () use ($app) {
-    // get_faq
-    $db = new DbOperation();
-    $result = $db->get_allLanguages();
-    $response = array();
-    $response['success'] = true;
-    $response['data'] = array();
-    while ($row = $result->fetch_assoc()) {
-        $temp = array();
-        foreach ($row as $key => $value) {
-            $temp[$key] = $value;
-        }
-        $temp = array_map('utf8_encode', $temp);
-        array_push($response['data'], $temp);
-    }
-    echoResponse(200, $response);
-});
-
-
-/* *
- * add user payment
- * Parameters: user_id,payment_type,amount,start_date,end_date,payment
- * Authorization: Put API Key in Request Header
- * Method: post
- * */
-$app->post('/user_payment', 'authenticateUser', function() use ($app){
-    verifyRequiredParams(array('user_id','start_date','end_date','payment'));
-    $user_id = $app->request->post('user_id');
-    $payment_type = $app->request->post('payment_type');
-    $amount = $app->request->post('amount');
-    $start_date = $app->request->post('start_date');
-    $end_date = $app->request->post('end_date');
-    $payment = $app->request->post('payment');
-    $db = new DbOperation();
-    $response = array();
-    $data = array();
-    $user = $db->getUserData($user_id);
-    
-    if($payment=="trial")
-    {
-        $result = $db->user_trial($user_id,$payment_type,$amount,$start_date,$end_date);
-    }
-    else
-    {
-       $result = $db->user_payment($user_id,$payment_type,$amount,$start_date,$end_date);  
-    }
-   
-    if($result==1)
-    {
-        $response['success'] = true;
-        if($payment=="trial")
-        $response['message']="Trial Added successfully";
-    else
-        $response['message']="Payment Added successfully";
-    }
-    else
-    {
-        $response['success'] = false;
-        $response['message']="Error in payment";
-    }
-    if($user["otp_verification"]=="verified")
-    {
-        $data["otp_verification"]=true;
-    }
-    else
-    {
-        $data["otp_verification"]=false;   
-    }
-
-    // check if user has paid or using trial version
-
-    $user_payment=$db->check_user_payment($user_id);
-    $user_trial=$db->check_user_trial($user_id);
-    if($user_payment->num_rows>0)
-    {
-        $payment_data=$user_payment->fetch_assoc();
-        $data["user_payment"]="paid";
-        $data["start_date"]=$payment_data["start_date"];
-    }
-    else if ($user_trial->num_rows>0)
-    {
-        $trial_data=$user_trial->fetch_assoc();
-        $data["user_payment"]="trial";
-        $data["start_date"]=$trial_data["start_date"];
-    }
-    else
-    {
-        $data["user_payment"]="not available";
-        $data["start_date"]="";
-    }
-    $response["data"]=$data;
-    
-   
-    echoResponse(200,$response);
-});
 
 
 
@@ -2670,18 +2670,13 @@ function authenticateUser(\Slim\Route $route)
 
 
 // fcm notificaton for android
-function send_notification_android($data, $reg_ids_android, $title, $body,$send_to)
+function send_notification_android($data, $reg_ids_android, $title, $body)
 {
 
     $url = 'https://fcm.googleapis.com/fcm/send';
-    if($send_to=="user")
-    {
-        $api_key = 'AAAAECnANz8:APA91bGYp0sVe-8WMW7EJt6SHsaHXplVfZb0jniq8kSuw62aruDgcfLkH_-lTSQR2tFu_NSexF7L9tl05c1N1LxcLbrry2q_vE8gv5k4_xXM8GQj32EJDPbJm-FeO532GPO2wp-9sg6K';
-    }
-    else
-    {
-        $api_key = 'AAAAECnANz8:APA91bGYp0sVe-8WMW7EJt6SHsaHXplVfZb0jniq8kSuw62aruDgcfLkH_-lTSQR2tFu_NSexF7L9tl05c1N1LxcLbrry2q_vE8gv5k4_xXM8GQj32EJDPbJm-FeO532GPO2wp-9sg6K';
-    }
+   
+   $api_key = 'AAAA2n2PB4A:APA91bEb_4LGpFCH3xTmzG763VWpuV02DGrMmunv1e-bza06vBLdIZgcHaqYu_f7P8a-druZ7buh6b1-OzcLGCP1Yc0bywdVb93dlKQ-BmOgZCVSD135Itw9UKSuNy6rWGqyWr7Q9eLX';
+    
     
     $msg = array(
         'title' => $title,

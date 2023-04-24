@@ -95,11 +95,11 @@ $stmt_address->close();
                             <label class="form-label d-block" for="basic-default-fullname">Status</label>
                           
                           <div class="form-check form-check-inline mt-3">
-                            <input class="form-check-input" type="radio" name="status" id="enable" value="enable" required <?php if($deli_boy_data['status']=="enable"){ ?> checked <?php } ?> >
+                            <input class="form-check-input" type="radio" name="status" id="enable" value="enable" required disabled <?php if($deli_boy_data['status']=="enable"){ ?> checked <?php } ?> >
                             <label class="form-check-label" for="inlineRadio1">Enable</label>
                           </div>
                           <div class="form-check form-check-inline mt-3">
-                            <input class="form-check-input" type="radio" name="status" id="disable" value="disable" required <?php if($deli_boy_data['status']=="disable"){ ?> checked <?php } ?> >
+                            <input class="form-check-input" type="radio" name="status" id="disable" value="disable" required disabled <?php if($deli_boy_data['status']=="disable"){ ?> checked <?php } ?> >
                             <label class="form-check-label" for="inlineRadio1">Disable</label>
                           </div>
                           </div>

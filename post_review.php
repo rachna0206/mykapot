@@ -1,7 +1,7 @@
 <?php
   include("header.php");
 
-$stmt_plist = $obj->con1->prepare("select p1.*, c1.name as sender_name from post p1, customer_reg c1 where p1.sender_id=c1.id");
+$stmt_plist = $obj->con1->prepare("select p1.*, c1.name as sender_name from post p1, customer_reg c1 where p1.sender_id=c1.id and p1.id not in (select post_id from post_review) and p1.post_status='Dispatched'");
 $stmt_plist->execute();
 $post_res = $stmt_plist->get_result();
 $stmt_plist->close();

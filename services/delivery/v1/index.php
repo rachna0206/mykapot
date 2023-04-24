@@ -26,7 +26,7 @@ $app->post('/delivery_reg', function () use ($app) {
     $email = $data->email;
     $password = $data->password;
     $city = $data->city;
-    $zone_id = 0;
+    $zone_id = 11;
     $address = $data->address;
     $contact = $data->contact;
     $pincode = $data->pincode;
@@ -89,7 +89,7 @@ $app->post('/delivery_reg', function () use ($app) {
             } else {
                 $response["profile_pic_upload"] = "fail";
             }
-            if (move_uploaded_file($_FILES["id_proof"]["tmp_name"], "../../../deliveryboy_id/" . $MainFileName)) {
+            if (move_uploaded_file($_FILES["id_proof"]["tmp_name"], "../../../deliveryboy_id/" .  $ProofFileName)) {
                 $response["id_proof_upload"] = "success";
             } else {
                 $response["id_proof_upload"] = "fail";
@@ -115,7 +115,7 @@ $app->post('/delivery_reg', function () use ($app) {
                 //insert dboy devices
                 $insert_device = $db->insert_delivery_boy_device($dboy['db_id'], $tokenid, $device_type);
                 array_push($response["data"],$data);
-            } else if ($dboy["stats"] == 'disable') {
+            } else if ($dboy["status"] == 'disable') {
                 $response['value'] = "disable";
                 $response['result'] = false;
                 $response['message'] = "Sorry your ID has been disabled, contact the Admin";
@@ -156,7 +156,7 @@ $app->post('/login', function () use ($app) {
     $db = new DbOperation();
     $data = array();
     $data["data"] = array();
-    
+     
     if ($db->Delivery_boyLogin($email, $password)) {
         $delivery_boy = $db->getDelivery_boy($email);
         if ($delivery_boy > 0) {
@@ -196,23 +196,166 @@ $app->post('/login', function () use ($app) {
                 $data["data"]=$response;
 
             } else if ($delivery_boy["status"] == 'disable') {
-                $data['message'] = "You are disabled";
+                $data["data"]=null;  // added by jay 16-04-2023
+                $data['message'] = "You are disabled, contact admin";
                 $data['result'] = false;
 
             } else {
+                $data["data"]=null; // added by jay 16-04-2023
                 $data['result'] = false;
-                $data['message'] = "invalid";
+                $data['message'] = "Invalid email id or password";
             }
 
         }
     } else {
+        $data["data"]=null; // added by jay 16-04-2023
         $data['result'] = false;
 
-        $data['message'] = "Invalid username or password";
+        $data['message'] = "Invalid email or password";
     }
     
     echoResponse(200, $data);
 });
+
+
+
+
+
+
+
+
+/* *
+ * dboy login OTP
+ * Parameters: phno,tokenid,type
+ * Method: POST
+ * */
+
+$app->post('/login_otp', function () use ($app) {
+    verifyRequiredParams(array('data'));
+    $data = json_decode($app->request->post('data'));
+   
+    $phno = $data->phno;
+    $tokenid = $data->tokenid;
+    $type = $data->device_type;
+    $db = new DbOperation();
+    $data = array();
+    $data["data"] = array();
+     
+    $delivery_boy = $db->getDelivery_boy_phno($phno);
+        
+        if ($delivery_boy > 0) {
+            $response = array();
+            if (strtolower($delivery_boy["status"] == 'enable')) {
+                $data['message'] = "";
+                $data['result'] = true;
+                $response['id'] = $delivery_boy['db_id'];
+                $response['name'] = $delivery_boy['name'];
+                
+                
+
+                //check for delivery boy status
+                $del_status=$db->check_delivery_boy($delivery_boy['db_id']);
+
+                if($del_status->num_rows==0)
+                {
+                    $del_boy_status="on";
+                    //insert into delivery boy availability
+                    $del_available=$db->delivery_boy_availability($delivery_boy['db_id'],$del_boy_status);
+                }
+                else
+                {
+                    $del_boy_data=$del_status->fetch_assoc();
+                    $del_boy_status=$del_boy_data["status"];
+                    $del_available=$db->delivery_boy_availability($delivery_boy['db_id'],$del_boy_status);
+                }
+
+                
+
+                //delete delivery boy devices
+               // $del_device = $db->delete_delivery_boy_device($delivery_boy['id']);
+
+                //insert delivery boy devices
+                $insert_device = $db->insert_delivery_boy_device($delivery_boy['db_id'], $tokenid, $type);
+               
+                $data["data"]=$response;
+
+            } else if ($delivery_boy["status"] == 'disable') {
+                $data["data"]=null;  // added by jay 16-04-2023
+                $data['message'] = "You are disabled, contact admin";
+                $data['result'] = false;
+
+            } else {
+                $data["data"]=null; // added by jay 16-04-2023
+                $data['result'] = false;
+                $data['message'] = "Invalid phone number";
+            }
+            
+
+        
+     
+    }
+    else {
+                $data["data"]=null; // added by jay 16-04-2023
+                $data['result'] = false;
+                $data['message'] = "Invalid phone number";
+            }
+    
+    echoResponse(200, $data);
+});
+
+
+
+
+/* *
+ * dboy Check pnoneno
+ * Parameters: phno
+ * Method: POST
+ * */
+
+$app->post('/check_phoneno', function () use ($app) {
+    verifyRequiredParams(array('data'));
+    $data = json_decode($app->request->post('data'));
+   
+    $phno = $data->phno;
+  
+    $db = new DbOperation();
+    $data = array();
+    $data["data"] = array();
+     
+    $delivery_boy = $db->getDelivery_boy_phno($phno);
+        
+        if ($delivery_boy > 0) {
+            $response = array();
+            if (strtolower($delivery_boy["status"] == 'enable'))
+            {
+                $data['message'] = "Valid phone number";
+                $data['result'] = true;
+               
+
+            }
+            else
+            {
+              $data['message'] = "Delivery boy is disabled";
+                $data['result'] = false;
+            }
+     
+          }
+            else 
+            {
+                $data["data"]=null; // added by jay 16-04-2023
+                $data['result'] = false;
+                $data['message'] = "Invalid phone number";
+            }
+    
+    echoResponse(200, $data);
+        
+});
+
+
+
+
+
+
 
 /*
 
@@ -230,21 +373,58 @@ $app->post('/view_profile', function () use ($app) {
     $db = new DbOperation();
     $result = $db->view_profile($userid);
     $response = array();
-    $response['result'] = false;
+    $response['result'] = true;
     $response['data'] = array();
     while ($row = $result->fetch_assoc()) {
-        $temp = array();
+        $temp = new stdClass();
         
         foreach ($row as $key => $value) {
-            $temp[$key] = $value;
+            $temp->$key = $value;
         }
-        $temp["img_url"]="https://mykapot.com/mykapotroot555/deliveryboy_id/";
+        $temp->img_url="https://mykapot.com/mykapotroot555/deliveryboy_id/";
         
-        $temp = array_map('utf8_encode', $temp);
-        array_push($response['data'], $temp);
+       
     }
+    $response["data"]=$temp;
     echoResponse(200, $response);
 });
+
+
+/*
+
+ * check profile
+ * Parameters:userid
+ * Method: post
+ by jay 22/04
+ 
+*/
+
+
+$app->post('/check_profile', function () use ($app) {
+    verifyRequiredParams(array('data'));
+    $data = json_decode($app->request->post('data'));
+    $userid = $data->userid;
+    $db = new DbOperation();
+    $result = $db->check_profile($userid);
+    $response = array();
+    $response['result'] = true;
+    $response['data'] = array();
+    while ($row = $result->fetch_assoc()) {
+        $temp = new stdClass();
+        
+        foreach ($row as $key => $value) {
+            $temp->$key = $value;
+        }
+        $temp->img_url="https://mykapot.com/mykapotroot555/deliveryboy_id/";
+        
+       
+    }
+    $response["data"]=$temp;
+    echoResponse(200, $response);
+});
+
+
+
 
 
 /*
@@ -280,6 +460,7 @@ $app->post('/get_job_list', function () use ($app) {
 
         }
     } else {
+        $data['data']=null;  // added by jay 16-04-2023
         $data['result'] = false;
         $data['message'] = "No data found";
     }
@@ -331,6 +512,91 @@ $app->post('/get_active_job_list', function () use ($app) {
 });
 
 
+/* *
+ * Change password (by Jay 23-4-23)
+ * Parameters: cur_password,new_password,uid
+ * Method: POST
+ * 
+ */
+
+$app->post('/change_password', function () use ($app) {
+    verifyRequiredParams(array('data'));
+    $data = json_decode($app->request->post('data'));
+    $cur_password = $data->cur_password;
+    $new_password = $data->new_password;
+    $uid = $data->uid;
+    $action='updated';
+	
+    $db = new DbOperation();
+    $data = array();
+    $data["data"] = array();  
+    $affected_rows=$db->change_password($cur_password,$new_password,$uid,$action);
+    if($affected_rows==1)
+    {
+		$data['message'] = "Your Password updated successfully";
+        $data['result'] = true;
+    }
+    else 
+    {
+        $data['message'] = "Your current password doesnt match, please check!";
+        $data['result'] = false;
+    }
+    echoResponse(200, $data);
+});
+
+
+
+
+
+
+
+
+
+/*
+*name:get post job list
+*param:deliveryboy_id
+method:post
+*/
+$app->post('/get_post_job_list', function () use ($app) {
+
+   $data = json_decode($app->request->post('data'));
+    $deliveryboy_id = $data->deliveryboy_id;
+
+
+    $db = new DbOperation();
+    $data = array();
+    $data["data"] = array();
+    $response = array();
+
+    $joblist = $db->get_post_job_list($deliveryboy_id);
+
+    if (!empty($joblist)) {
+
+        $data['result'] = true;
+        $data['message'] = "";
+        while ($row = $joblist->fetch_assoc()) {
+            
+           
+            foreach ($row as $key => $value) {
+                $temp[$key] = $value;
+            }
+            
+            $temp = array_map('utf8_encode', $temp);
+            array_push($data["data"], $temp);
+
+        }
+
+
+    } else {
+        $data['result'] = false;
+        $data['message'] = "No data found";
+    }
+
+    echoResponse(200, $data);
+});
+
+
+
 /*
 *name:get job history
 *param:deliveryboy_id
@@ -376,9 +642,6 @@ $app->post('/get_job_history', function () use ($app) {
 method:post
 */
 $app->post('/city_list', function () use ($app) {
-
-    
-
 
     $db = new DbOperation();
     $data = array();
@@ -442,46 +705,6 @@ $app->post('/update_delivery_boy_availability', function () use ($app) {
     echoResponse(200, $data);
 });
 
-/*
-* check delivery boy status (enable/disable)
-*param:id
-method:post
-*/
-$app->post('/check_delivery_boy_status', function () use ($app) {
-
-    verifyRequiredParams(array('id'));
-    $id = $app->request->post('id');
-
-
-    $db = new DbOperation();
-    $data = array();
-
-
-    if ($db->check_delivery_boy_status($id)) {
-
-
-        $data['result'] = true;
-        $data['message'] = "You are enabled";
-
-
-    } else {
-        $data['result'] = false;
-        $data['message'] = "You are disabled";
-    }
-    $resp=$db->check_delivery_boy($id);
-    if($resp->num_rows>0)
-    {
-        $del_boy_data=$resp->fetch_assoc();
-        $data['staus']=$del_boy_data["status"];
-    }
-    else
-    {
-        $data['staus']="Off";
-    }
-    echoResponse(200, $data);
-});
-
-
 
 /*
 * accept /reject /dispatch/dilivered job
@@ -495,7 +718,8 @@ $app->post('/job_action', function () use ($app) {
     $job_id = $data->job_id;    
     $status = $data->status;
 
-    $payment_status=($app->request->post('payment_status')!="")?$app->request->post('payment_status'):"";
+    $payment_status=isset($data->payment_status)?$data->payment_status:"";
+    $barcode=isset($data->barcode)?$data->barcode:"";
     $db = new DbOperation();
     $data = array();
     $data["data"] = array();
@@ -505,34 +729,42 @@ $app->post('/job_action', function () use ($app) {
         $order = $db->order_info($job_id);
         // reject other delivery boy's job
         if($status=="accept")
-        {   $job_status="reject";
+        {   $job_status="auto_reject";
             $db->job_update($order["post_id"],$job_status,$job_id);
+            //update post status
+            $order_status="accept";
+            $db->update_order_status($order["post_id"],$order_status,$payment_status);
+
         }
-        if (strtolower($status) == "dispatch") {
+        else if (strtolower($status) == "transit") 
+        {
 
             //$order = $db->order_info($job_id);
-            $order_status="Dispatched";
+            $order_status="transit";
+            $payment_status='paid';
             if ($update_order = $db->update_order_status($order["post_id"],$order_status,$payment_status)) {
                 $data["order_status"] = "updated";
 
                 //notification to admin/vendor panel
-                $noti_type='post_dispatched';
-                $msg='Your post has been dispatched';
+                $noti_type='post_in_transit';
+                $msg='Your post is in transit';
                 $sender_type='delivery';
                 $vendorstatus=1;
                 $playstatus=1;
                 $adminstatus=1;
                 $adminplaystatus=1;
-               // $notification = $db->new_notification($order["v_id"], $order["customer_id"], $order["post_id"],$noti_type,$msg,$sender_type,$vendorstatus,$playstatus,$adminstatus,$adminplaystatus);
+                
+                // add barcode in delivery images
+                $del_image=$db->add_delivery_image($job_id,$barcode,"barcode");
 
                 if (isset($_FILES["image"]["name"]) && $_FILES["image"]["name"] != "")
                 {
-                    if (file_exists("../../../assets/post_images/" . $_FILES["image"]["name"] )) {
+                    if (file_exists("../../../post_images/" . $_FILES["image"]["name"] )) {
                         $i = 1;
                         $MainFileName = $_FILES["image"]["name"];
                         $Arr = explode('.', $MainFileName);
                         $MainFileName = $Arr[0] . $i . "." . $Arr[1];
-                        while (file_exists("../../../assets/post_images/" . $MainFileName)) {
+                        while (file_exists("../../../post_images/" . $MainFileName)) {
                             $i++;
                             $MainFileName = $Arr[0] . $i . "." . $Arr[1];
                         }
@@ -545,7 +777,96 @@ $app->post('/job_action', function () use ($app) {
                 }
                 
                 if($MainFileName!=""){
-                    if(move_uploaded_file($_FILES["image"]["tmp_name"], "../../../assets/post_images/" . $MainFileName))
+                    if(move_uploaded_file($_FILES["image"]["tmp_name"], "../../../post_images/" . $MainFileName))
+                    {
+                              $response["image_upload"] = "success";
+                    }
+                    else
+                    {
+                              $response["image_upload"] = "fail";
+                    }
+                    
+                }
+            } else {
+                $data["order_status"] = "fail";
+            }
+
+
+            // send notification to user
+            $not = new stdClass();
+            $reg_ids_android = array();
+            $reg_ids_ios = array();
+            $inc=0;
+            $inc2=0;
+            $send_to="user";
+            $not->o_id = $order["post_id"];
+            $not->id = $order["post_id"];
+            $not->message = "Post is in ".$order_status;
+            $not->title =  "#".$order["post_id"];
+            $not->order_id =  $order["post_id"];
+            $not->body =  "Post is in ".$order_status;
+           
+            $title ="#".$order["post_id"];
+            $body =  "Post is in ".$order_status;
+
+        
+            // notification to android devices
+            $res_token = $db->fetch_user_android($order["post_id"]);
+            while ($token = mysqli_fetch_array($res_token)) {
+                $reg_ids_android[$inc++] = $token["device_token"];
+            }
+          //  $resp=send_notification_android($not, $reg_ids_android, $title, $body,$send_to);
+
+            // notification to ios devices
+            $res_token = $db->fetch_user_ios($order["post_id"]);
+            while ($token_ios = mysqli_fetch_array($res_token)) {
+                $reg_ids_ios[$inc2++] = $token_ios["token"];
+            }
+           // $resp=send_notification_ios($not, $reg_ids_ios, $title, $body,$send_to);
+            /*if($resp)
+            {
+                $response["message"] = "Notification has been sent";
+            }*/
+        }
+        else if (strtolower($status) == "dispatched") 
+        {
+
+            //$order = $db->order_info($job_id);
+            $order_status="dispatched";
+            if ($update_order = $db->update_order_status($order["post_id"],$order_status,$payment_status)) {
+                $data["order_status"] = "updated";
+
+                //notification to admin/vendor panel
+                $noti_type='post_dispatched';
+                $msg='Your post has been dispatched';
+                $sender_type='delivery';
+                $vendorstatus=1;
+                $playstatus=1;
+                $adminstatus=1;
+                $adminplaystatus=1;
+              
+
+                if (isset($_FILES["image"]["name"]) && $_FILES["image"]["name"] != "")
+                {
+                    if (file_exists("../../../post_images/" . $_FILES["image"]["name"] )) {
+                        $i = 1;
+                        $MainFileName = $_FILES["image"]["name"];
+                        $Arr = explode('.', $MainFileName);
+                        $MainFileName = $Arr[0] . $i . "." . $Arr[1];
+                        while (file_exists("../../../post_images/" . $MainFileName)) {
+                            $i++;
+                            $MainFileName = $Arr[0] . $i . "." . $Arr[1];
+                        }
+
+                    } else {
+                        $MainFileName = $_FILES["image"]["name"];;
+                    }
+                           
+                        $del_image=$db->add_delivery_image($job_id,$MainFileName,$status);
+                }
+                
+                if($MainFileName!=""){
+                    if(move_uploaded_file($_FILES["image"]["tmp_name"], "../../../post_images/" . $MainFileName))
                     {
                               $response["image_upload"] = "success";
                     }
@@ -603,17 +924,361 @@ $app->post('/job_action', function () use ($app) {
        
 
 
-// send notification to vendor & admin
-        
-            $order_status=$status."ed";   
-            if(strtolower($status) != "deliver")
+
+           
+    
+            if(strtolower($status) == "accept" )
             {
-                $noti_ord_status="Confirmed" ;       
+                //notification to admin/vendor panel
+                $noti_type='post_accepted';
+                $msg='Delivery job has been accepted ';
+                          
+            }
+            if(strtolower($status) == "reject" )
+            {
+                //notification to admin/vendor panel
+                $noti_type='post_rejected';
+                $msg='Delivery job has been rejected ';    
+            }
+            if(strtolower($status) == "dispatched" )
+            {
+                //notification to admin/vendor panel
+                $noti_type='post_dispatched';
+                $msg='Delivery job has been dispatched ';    
+            }
+            
+          
+            
+            $adminstatus=1;
+            $adminplaystatus=1;
+            
+             //if else conditin  added by Jay 21-04-23 
+            if(strtolower($status) == "reject")
+            {
+                $notification = $db->new_notification($noti_type,$job_id,$msg,$adminstatus,$adminplaystatus);
             }
             else
             {
-                $noti_ord_status=$status."ed";        
+                   $notification = $db->new_notification($noti_type,$order["post_id"],$msg,$adminstatus,$adminplaystatus);
             }
+            
+           // $notification = $db->new_notification($noti_type,  $order["post_id"],$msg,$adminstatus,$adminplaystatus);
+
+            if($notification)
+            {
+                $response["message"] = "Notification has been sent";
+            }
+        
+
+
+    } else {
+        $data['result'] = false;
+        $data['message'] = "This job has been already delegated!";
+    }
+
+    echoResponse(200, $data);
+});
+
+
+/*
+*name:get total jobs
+*param:deliveryboy_id,start_date,end_date
+method:post
+*/
+$app->post('/get_total_job', function () use ($app) {
+
+    verifyRequiredParams(array('data'));
+    $data = json_decode($app->request->post('data'));
+    $deliveryboy_id = $data->deliveryboy_id;
+    $start_date=$data->start_date;
+    $end_date=$data->end_date;
+
+    $db = new DbOperation();
+    $data = array();
+    //$data["data"] = array();
+   // $data["data"]["list"] = array(); //added
+    $response = array();
+    $data_main=new stdClass();
+    $list=array();
+    $list["list"]= array();
+    $joblist = $db->get_total_job($deliveryboy_id,$start_date,$end_date);
+    $total_job=$joblist->num_rows;
+    if (!empty($joblist)) {
+        $data['result'] = true;
+        $data['message'] = "";
+        $total_payment=0;
+        
+    //    $data["total_job"]=$total_job;
+        while ($row = $joblist->fetch_assoc()) {
+            $temp=array();
+            $total_payment+=$row["total_payment"];
+            foreach ($row as $key => $value) {
+                $temp[$key] = $value;
+            }
+           $temp = array_map('utf8_encode', $temp);
+        array_push($list["list"], $temp);
+
+        }
+         
+         //    $data["total_payment"]=$total_payment;
+         
+
+         $list["total_payment"]=$total_payment;
+         $list["total_job"]=$total_job;
+         // $temp2 = array_map('utf8_encode', $temp2);
+         
+       
+        //   array_push($data["data"]["list"], $temp2);
+             
+         $data["data"]=$list;
+       
+    } else {
+        $data['data']=null;  // added by jay 16-04-2023
+        $data['result'] = false;
+        $data['message'] = "No data found";
+    }
+
+    echoResponse(200, $data);
+});
+
+
+
+/*
+* accept /reject /dispatch/dilivered job
+*param:job_id,status
+method:post
+*/
+$app->post('/job_action_jay', function () use ($app) {
+
+    verifyRequiredParams(array('data'));
+    $data = json_decode($app->request->post('data'));
+    $job_id = $data->job_id;    
+    $status = $data->status;
+    //$weight=isset($data->weight)?$data->weight:"";
+    $payment_status=isset($data->payment_status)?$data->payment_status:"";
+    $barcode=isset($data->barcode)?$data->barcode:"";
+    $db = new DbOperation();
+    $data = array();
+    $data["data"] = array();
+    $MainFileName="";
+    if ($db->job_action($job_id, $status)) {
+        
+        $order = $db->order_info($job_id);
+        
+        
+       if($status=="reject") // updated by jay 16-04
+       {
+     
+            $db->job_assign_update($job_id,$status);
+           
+       }
+       else if($status=="accept")
+        {   
+            
+            $job_status="auto_reject";
+            $db->job_update($order["post_id"],$job_status,$job_id);
+            //update post status
+            $db->update_order_status($order["post_id"],$status,$payment_status);
+
+        }
+       
+
+        else if (strtolower($status) == "dispatched") 
+        {
+           
+
+             $db->job_assign_update($job_id,$status);
+          
+           
+            if ($update_order =  $db->update_order_status($order["post_id"],$status,$payment_status)) 
+            {   // modified by jay 16-04
+                $data["order_status"] = "updated";
+
+                //notification to admin/vendor panel
+                $noti_type='post_dispatched';
+                $msg='Your post has been dispatched';
+                $sender_type='delivery';
+                $vendorstatus=1;
+                $playstatus=1;
+                $adminstatus=1;
+                $adminplaystatus=1;
+               // $notification = $db->new_notification($order["v_id"], $order["customer_id"], $order["post_id"],$noti_type,$msg,$sender_type,$vendorstatus,$playstatus,$adminstatus,$adminplaystatus);
+
+                if (isset($_FILES["image"]["name"]) && $_FILES["image"]["name"] != "")
+                {
+                    if (file_exists("../../../post_images/" . $_FILES["image"]["name"] )) { // removed //assests by jay 16/04
+                        $i = 1;
+                        $MainFileName = $_FILES["image"]["name"];
+                        $Arr = explode('.', $MainFileName);
+                        $MainFileName = $Arr[0] . $i . "." . $Arr[1];
+                        while (file_exists("../../../post_images/" . $MainFileName)) { // removed //assests by jay 16/04
+                            $i++;
+                            $MainFileName = $Arr[0] . $i . "." . $Arr[1];
+                        }
+
+                    } else {
+                        $MainFileName = $_FILES["image"]["name"];;
+                    }
+                           echo $MainFileName.$status.$job_id;
+                         $del_image=$db->add_delivery_image($job_id,$MainFileName,$status);
+                }
+                
+                if($MainFileName!=""){
+                    if(move_uploaded_file($_FILES["image"]["tmp_name"], "../../../post_images/" . $MainFileName)) // removed //assests by jay 16/04
+                    {
+                              $response["image_upload"] = "success";
+                    }
+                    else
+                    {
+                              $response["image_upload"] = "fail";
+                    }
+                    
+                }
+            } else {
+                $data["order_status"] = "fail";
+            }
+
+
+            // send notification to user
+            $not = new stdClass();
+            $reg_ids_android = array();
+            $reg_ids_ios = array();
+            $inc=0;
+            $inc2=0;
+            $send_to="user";
+            $not->o_id = $order["post_id"];
+            $not->id = $order["post_id"];
+            $not->message = "Post has been ".$order_status;
+            $not->title =  "#".$order["post_id"];
+            $not->order_id =  $order["post_id"];
+            $not->body =  "Post has been ".$order_status;
+           
+            $title ="#".$order["post_id"];
+            $body =  "Post has been ".$order_status;
+
+            
+            // notification to android devices
+            $res_token = $db->fetch_user_android($order["post_id"]);
+            while ($token = mysqli_fetch_array($res_token)) {
+                $reg_ids_android[$inc++] = $token["device_token"];
+            }
+          //  $resp=send_notification_android($not, $reg_ids_android, $title, $body,$send_to);
+
+            // notification to ios devices
+            $res_token = $db->fetch_user_ios($order["post_id"]);
+            while ($token_ios = mysqli_fetch_array($res_token)) {
+                $reg_ids_ios[$inc2++] = $token_ios["token"];
+            }
+           // $resp=send_notification_ios($not, $reg_ids_ios, $title, $body,$send_to);
+            /*if($resp)
+            {
+                $response["message"] = "Notification has been sent";
+            }*/
+        }
+        if (strtolower($status) == "transit") 
+        {
+
+             $db->job_assign_update($job_id,$status); // changed by Jay 16-04-23
+            $payment_status="Paid"; // added by jay 16-04-23
+            
+            if ($update_order = $db->update_order_status($order["post_id"],$status,$payment_status)) {
+                $data["order_status"] = "updated";
+
+                //notification to admin/vendor panel
+                $noti_type='post_in_transit';
+                $msg='Your post is in transit';
+                $sender_type='delivery';
+                $vendorstatus=1;
+                $playstatus=1;
+                $adminstatus=1;
+                $adminplaystatus=1;
+               
+                //update post weight & total payment
+                // add barcode in delivery images
+                $barcode='static123'; // added to test and its working , need to change later
+                $del_image=$db->add_delivery_image($job_id,$barcode,"barcode");
+
+                if (isset($_FILES["image"]["name"]) && $_FILES["image"]["name"] != "")
+                {
+                    if (file_exists("../../../post_images/" . $_FILES["image"]["name"] )) {  // removed //assests by jay 16/04
+                        $i = 1;
+                        $MainFileName = $_FILES["image"]["name"];
+                        $Arr = explode('.', $MainFileName);
+                        $MainFileName = $Arr[0] . $i . "." . $Arr[1];
+                        while (file_exists("../../../post_images/" . $MainFileName)) { // removed //assests by jay 16/04
+                            $i++;
+                            $MainFileName = $Arr[0] . $i . "." . $Arr[1];
+                        }
+
+                    } else {
+                        $MainFileName = $_FILES["image"]["name"];;
+                    }
+                           
+                        $del_image=$db->add_delivery_image($job_id,$MainFileName,$status);
+                }
+                
+                if($MainFileName!=""){
+                    if(move_uploaded_file($_FILES["image"]["tmp_name"], "../../../post_images/" . $MainFileName)) // removed //assests by jay 16/04
+                    {
+                              $response["image_upload"] = "success";
+                    }
+                    else
+                    {
+                              $response["image_upload"] = "fail";
+                    }
+                    
+                }   // added by jay 16-04 - kept this call as it is
+            } else {
+                $data["order_status"] = "fail";
+            }
+
+
+            // send notification to user
+            $not = new stdClass();
+            $reg_ids_android = array();
+            $reg_ids_ios = array();
+            $inc=0;
+            $inc2=0;
+            $send_to="user";
+            $not->o_id = $order["post_id"];
+            $not->id = $order["post_id"];
+            $not->message = "Post has been ".$order_status;
+            $not->title =  "#".$order["post_id"];
+            $not->order_id =  $order["post_id"];
+            $not->body =  "Post has been ".$order_status;
+           
+            $title ="#".$order["post_id"];
+            $body =  "Post has been ".$order_status;
+
+            
+            // notification to android devices
+            $res_token = $db->fetch_user_android($order["post_id"]);
+            while ($token = mysqli_fetch_array($res_token)) {
+                $reg_ids_android[$inc++] = $token["device_token"];
+            }
+          //  $resp=send_notification_android($not, $reg_ids_android, $title, $body,$send_to);
+
+            // notification to ios devices
+            $res_token = $db->fetch_user_ios($order["post_id"]);
+            while ($token_ios = mysqli_fetch_array($res_token)) {
+                $reg_ids_ios[$inc2++] = $token_ios["token"];
+            }
+           // $resp=send_notification_ios($not, $reg_ids_ios, $title, $body,$send_to);
+            /*if($resp)
+            {
+                $response["message"] = "Notification has been sent";
+            }*/
+
+        }
+
+
+
+        $data['result'] = true;
+        $data['message'] = "Job " . $status;
+
+       
+
+
             
            
     
@@ -630,19 +1295,33 @@ $app->post('/job_action', function () use ($app) {
                 $noti_type='post_rejected';
                 $msg='Delivery job has been rejected ';    
             }
-            if(strtolower($status) == "dispatch" )
+            if(strtolower($status) == "dispatched" )
             {
                 //notification to admin/vendor panel
                 $noti_type='post_dispatched';
                 $msg='Delivery job has been dispatched ';    
+            }
+            if(strtolower($status) == "transit" )
+            {
+                //notification to admin/vendor panel
+                $noti_type='post_in_transit';
+                $msg='Delivery job is in transit ';    
             }
             
           
             
             $adminstatus=1;
             $adminplaystatus=1;
-            $notification = $db->new_notification($noti_type,  $order["post_id"],$msg,$adminstatus,$adminplaystatus);
-
+            //if else conditin  added by Jay 21-04-23 
+            if(!strtolower($status) == "reject")
+            {
+                $notification = $db->new_notification($noti_type,  $order["post_id"],$msg,$adminstatus,$adminplaystatus);
+            }
+            else
+            {
+                   $notification = $db->new_notification($noti_type,$job_id,$msg,$adminstatus,$adminplaystatus);
+            }
+            
             if($notification)
             {
                 $response["message"] = "Notification has been sent";
@@ -661,8 +1340,8 @@ $app->post('/job_action', function () use ($app) {
 
 
 /*
-*name:get job list
-*param:deliveryboy_id
+*name:get job detail
+*param:job_id
 method:post
 */
 $app->post('/get_job_detail', function () use ($app) {
@@ -682,16 +1361,58 @@ $app->post('/get_job_detail', function () use ($app) {
     if (!empty($jobdata)) {
         $data['result'] = true;
         $data['message'] = "";
-        
+        $temp= new stdClass();
         while ($row = $jobdata->fetch_assoc()) {
 
             foreach ($row as $key => $value) {
-                $temp[$key] = $value;
+                $temp->$key= strval($value);
             }
-            $temp = array_map('utf8_encode', $temp);
-            array_push($data["data"], $temp);
+            
+        }
+        $data["data"]=$temp;
+    } else {
+        $data['result'] = false;
+        $data['message'] = "No data found";
+    }
+
+    echoResponse(200, $data);
+});
+
+
+
+
+/*
+*name:get post job detail
+*param:job_id
+method:post
+*/
+$app->post('/get_post_job_detail', function () use ($app) {
+
+    verifyRequiredParams(array('data'));
+    $data = json_decode($app->request->post('data'));
+    $job_id = $data->job_id;
+   
+
+    $db = new DbOperation();
+    $data = array();
+    $data["data"] = array();
+    $response = array();
+
+    $jobdata = $db->get_post_job_detail($job_id);
+    
+    if (!empty($jobdata)) {
+        $data['result'] = true;
+        $data['message'] = "";
+        $temp=new stdClass();
+        while ($row = $jobdata->fetch_assoc()) {
+
+            foreach ($row as $key => $value) {
+                $temp->$key = strval($value);
+            }
+            
 
         }
+        $data["data"]=$temp;
     } else {
         $data['result'] = false;
         $data['message'] = "No data found";
@@ -725,30 +1446,64 @@ $app->post('/update_weight', function () use ($app) {
     $post_data=$db->post_data($post_id);
     $ack_charges=$post_data["ack_charges"];
     $delivery_charge=$post_data["delivery_charge"];
-    $discount=($post_data["discount"]!="")?$post_data["discount"]:0;
+    //$discount=($post_data["discount"]!="")?$post_data["discount"]:0;
+    $coupon_id=$post_data["coupon_id"];
     $mail_type=$post_data["mail_type"];
+    $cust_id=$post_data["sender_id"];
      // calculate charges
-   $get_amount=$db->get_amount($weight,$mail_type);
+    $get_amount=$db->get_amount($weight,$mail_type);
+
+   // check if discount is available or not 
+    $get_discount=$db->get_discount($coupon_id,$get_amount,$delivery_charge);
+    if($get_discount==1)
+    {
+        
+         $discount=0;
+    }
+    else if ($get_discount==2)
+    {
+        
+         $discount=0;
+    }
+    else
+    {
+
+     $discount=$get_discount;
+    }
+
+    // update coupon counter if discount is 0
+    if($discount==0)
+    {
+        $res_coupon_counter=$db->update_counter($cust_id,$coupon_id);
+        $coupon_id=0;
+    }
+    
+
    if($get_amount>0)
    {
         $basic_charges=$get_amount;
-        $total_charges=($delivery_charge+$ack_charges+$basic_charges)-$discount;
+        $total_charges=$delivery_charge+$ack_charges+$basic_charges;
+        $total_payment=($delivery_charge+$ack_charges+$basic_charges)-$discount;
         // update post grams & charges
-        $jobdata = $db->update_weight($post_id,$weight,$basic_charges,$total_charges);
+        $jobdata = $db->update_weight($post_id,$weight,$basic_charges,$total_charges,$total_payment,$discount,$coupon_id);
         
         if ($jobdata>0) {
             $data['result'] = true;
             $data['message'] = "";
-            $temp['total_charges']=$total_charges;
+            $temp['total_charges']=$total_payment;
             $data['data']=$temp;
             
         } else {
-            $data['result'] = false;
+            
+            $data['result'] = true;
+            $temp['total_charges']=$total_payment;
+            $data['data']=$temp;
             $data['message'] = "Weight already updated";
         }
    }
    else
    {
+        $data["data"]=null; 
         $data['result'] = false;
         $data['message'] = "Weight not available";
    }
@@ -794,185 +1549,43 @@ $data = json_decode($app->request->post('data'));
 
 });
 
-/*
-* order list
-*param:job_id
-method:post
+
+/* get privacy policy
+method:get
+parmas:
+  changed by jay 22-04-23 , converted from array to object
 */
-$app->post('/order_list', function () use ($app) {
-
-    verifyRequiredParams(array('job_id'));
-    $job_id = $app->request->post('job_id');
-
-
-    $db = new DbOperation();
-    $data = array();
-    $result = $db->order_list($job_id);
-    $fields_num = mysqli_num_rows($result);
-    if ($fields_num > 0) {
-
-        $data['result'] = true;
-        $data['message'] = "";
-        $response_detail = array();
-        while ($order_list = mysqli_fetch_array($result)) {
-
-
-            $details = json_decode(str_replace("\'", "'", $order_list["order_list"]));
-
-
-            if (count($details) > 0) {
-                $order = new stdClass();
-                for ($k = 0; $k < count($details); $k++) {
-
-                    $order->name = str_replace("&quot;", "''", $details[$k]->name);
-                    $order->quantity = str_replace("&quot;", "''", $details[$k]->quantity);
-                    array_push($response_detail, $order);
-                }
-
-            }
-
-        }
-        $data["data"] = $response_detail;
-    } else {
-        $data['result'] = false;
-        $data['message'] = "No data found";
-    }
-
-    echoResponse(200, $data);
-});
-
-
-
-
-/*
-*name:add_location
-*param:db_id,from_date,to_date
-method:post
-*/
-$app->post('/add_location', function () use ($app) {
-
-    verifyRequiredParams(array('db_id','lat','lng'));
-    $db_id = $app->request->post('db_id');
-    $lat = $app->request->post('lat');
-    $long = $app->request->post('lng');
-    
-
-
-    $db = new DbOperation();
-    $data = array();
-    
-    // check if delivery location is in databse
-    $check_location=$db->check_delivery_location($db_id);
-    if($check_location->num_rows>0)
-    {
-        $db_location=$check_location->fetch_assoc();
-        //update location if already exsits
-         
-
-        $add_location = $db->update_location($db_location["id"],$lat,$long);
-    }
-    else
-    {
-         // add new location
-
-        $add_location = $db->add_location($db_id,$lat,$long);
-    }
-
-    
-
-
-   
-    
-   if ($add_location == 0) {
-            $data['result'] = false;
-            
-            $data['message'] = "Please try again";
-            
-        } else {
-            $data['result'] = true;
-            $data["message"] = "Added successfully";
-           
-        }
-
-    echoResponse(200, $data);
-});
-
-
-
-/*
-*name:get account data
-*param:db_id,from_date,to_date
-method:post
-*/
-$app->post('/get_account', function () use ($app) {
-
-    verifyRequiredParams(array('db_id','from_date','to_date'));
-    $db_id = $app->request->post('db_id');
-    $from_date = $app->request->post('from_date');
-    $to_date = $app->request->post('to_date');
-
-
-    $db = new DbOperation();
-    $data = array();
-    $data["data"] = array();
-    $response = array();
-
-    $account_data = $db->get_account($db_id,$from_date,$to_date);
-    
-    if (!empty($account_data)) {
-        $data['result'] = true;
-        $data['message'] = "";
-        
-        while ($row = $account_data->fetch_assoc()) {
-
-            foreach ($row as $key => $value) {
-                $temp[$key] = !is_null($value)?strval($value):0;
-            }
-            $temp = array_map('utf8_encode', $temp);
-            array_push($data["data"], $temp);
-
-        }
-    } else {
-        $data['result'] = false;
-        $data['message'] = "No data found";
-    }
-
-    echoResponse(200, $data);
-});
-/*
-URL: https://pragmanxt.com/pragma_demo_multivendor/Mobile_Services/delivery/v1//get_privacy
- * privacy policy
- * Parameters:
- * Method: get
-*/
-
-
-// get privacy policy
 $app->get('/get_privacy', function () use ($app) {
-    // get_faq
+   
     $db = new DbOperation();
     $result = $db->get_privacy();
-    $response = array();
+   // $response = array();
+    
     $response['result'] = false;
-    $response['data'] = array();
+   $data = json_decode($app->request->post('data'));
     while ($row = $result->fetch_assoc()) {
-        $temp = array();
+       // $temp = array();
+        $temp= new stdClass();
         foreach ($row as $key => $value) {
-            $temp[$key] = $value;
+            $temp->$key = $value;
         }
-        $temp = array_map('utf8_encode', $temp);
-        array_push($response['data'], $temp);
+       // $temp = array_map('utf8_encode', $temp);
+        $data["data"]= $temp;
+          $data["result"] = true;
+        
+        
+       
     }
-    echoResponse(200, $response);
+    echoResponse(200, $data);
 });
 
 
+
 /*
-URL: https://pragmanxt.com/pragma_demo_multivendor/Mobile_Services/delivery/v1/get_terms
  *  terms and conditions
  * Parameters:
  * Method: get
- * dev : jay
+ changed by jay 22/04/23
 */
 
 
@@ -981,253 +1594,22 @@ $app->get('/get_terms', function () use ($app) {
     $db = new DbOperation();
     $result = $db->get_terms();
     $response = array();
-    $response['result'] = false;
-    $response['data'] = array();
+ //   $response['result'] = false;
+ //   $response['data'] = array();
+ $data = json_decode($app->request->post('data'));
+ 
     while ($row = $result->fetch_assoc()) {
-        $temp = array();
+        $temp= new stdClass();
         foreach ($row as $key => $value) {
-            $temp[$key] = $value;
+            $temp->$key = $value;
         }
-        $temp = array_map('utf8_encode', $temp);
-        array_push($response['data'], $temp);
+    //    $temp = array_map('utf8_encode', $temp);
+     //   array_push($response['data'], $temp);
+       $data["data"]= $temp;
+       $data["result"] = true;
     }
-    echoResponse(200, $response);
-});
-
-
-
-/*
- * call notification
- * Parameters:
- * Method: post
- * dev : jay
-*/
-
-
-$app->post('/call_notification', function () use ($app) {
-    verifyRequiredParams(array('o_id'));
-    $o_id = $app->request->post('o_id');
-    $db = new DbOperation();
-    $delivery_boy=$db->delivery_boy_info($o_id);
-
-    $inc = 0;
-    $response = array();
-    $response['result'] = false;
-    $response['data'] = array();
-    $response["message"] = "";
-    $data = new stdClass();
-    $reg_ids_android = array();
-    $data->o_id = $o_id;
-    $data->message = "Unable to Locate. Please Contact delivery boy";
-    $data->title = "Unable to Locate. Please Contact delivery boy";
-    $data->body = "Unable to Locate. Please Contact delivery boy";
-    $data->delivery_contact=$delivery_boy["contact"];
-    $title = "Unable to Locate. Please Contact delivery boy";
-    $body = "Unable to Locate. Please Contact delivery boy";
-    $res_token = $db->call_notification_to_user_android($o_id);
-    while ($token = mysqli_fetch_array($res_token)) {
-        $reg_ids_android[$inc++] = $token["device_token"];
-    }
-    $resp=send_notification_android($data, $reg_ids_android, $title, $body);
-    if($resp)
-    {
-        $response["message"] = "Notification has been sent";
-    }
-
-    echoResponse(200, $response);
-});
-
-/*
-URL: https://pragmanxt.com/pragma_demo_multivendor/Mobile_Services/delivery/v1/index.php/forget_password
- * forget password
- * Parameters:email
- * Method: get
- * dev : jay
-*/
-
-$app->get('/forget_password/:userid', function ($userid) use ($app) {
-    $response = array();
-    $db = new DbOperation();
-    $user = $db->getUser($userid);
-    if ($user > 0) {
-
-        $uname = $user['name'];
-        $password = $user['password'];
-        $email=$user['email'];
-        $forgot_pass_msg = "<html><p>Dear " . str_replace("*", "'", $uname) . ",</p></br>
-<div>This e-mail is in response to your recent request to recover your forgotten password.<br>
-Your  password is:" . $password . "</div><br><div>Regards,<br> My City Store</div></html>";
-        $message = "Dear " . str_replace("*", "'", $uname) . ",
-This sms is in response to your recent request to recover your password.
-Your  password is:" . $password;
-
-        smtpmailer($email, "sales@myct.store", "My City Store", "Forgot Password", $forgot_pass_msg);
-
-
-        $response["result"] = false;
-        $response["message"] = "Mail sent.";
-
-        echoResponse(201, $response);
-
-    } else {
-
-        $response["result"] = true;
-        $response["message"] = "Please enter valid userid";
-        echoResponse(201, $response);
-    }
-});
-
-/*
-* check phone number
-*param:phone number
-
-*/
-
-$app->post('/check_phonenumber', function () use ($app) {
-    verifyRequiredParams(array('phone_number'));
-    $response = array();
-    $phone_number = $app->request->post('phone_number');
-    
-    $db = new DbOperation();
-    $res = $db->fetch_contact($phone_number);
-    $num_rows = $res->num_rows;
-   if ($num_rows > 0) {
-        $response['result'] = false;      
-        $response['message'] = "exist";
-        echoResponse(200, $response);
-
-
-    } else {
-
-        $response['message'] = "Sorry this number is not registered";
-        $response['result'] = true;       
-        echoResponse(200, $response);
-    }
-});
-
-
-/*
-* login_with_mobile
-* param: contact,device_type,token,version_code,version_name
-* method: post
-*/
-
-
-$app->post('/login_with_mobile', function () use ($app) {
-    verifyRequiredParams(array('contact', 'device_type', 'token'));
-
-   $data = array();
-    $data["data"] = array();
-    $response = array();
-
-    $phonenumber = $app->request->post('contact');
-    $device_type = $app->request->post('device_type');
-    $token = $app->request->post('token');
-
-    $db = new DbOperation();    
-    
-    $user = $db->get_deliveryboy($phonenumber);
-
-        //insert into delivery boy availability
-        $del_boy_status="on";
-        $del_available=$db->delivery_boy_availability($user['id'],$del_boy_status);
-
-        $res1 = $db->insert_delivery_boy_device($user['id'], $token,$device_type);
-        if ($res1 == 0) {
-            $data['result'] = false;
-            
-            $data['message'] = "Please try again";
-            echoResponse(201, $data);
-        } else {
-            $data['result'] = true;
-            $data["message"] = "Login successfully";
-            $response['id'] = $user['id'];
-            $response['email'] = $user['email'];
-            $response['name'] = $user['name'];
-            $response['status'] = $user['status'];
-            $response['contact'] = $user['contact'];
-            $response['address'] = $user['address'];
-            $response['zipcode'] = $user['zipcode'];
-            array_push($data["data"], $response);
-            echoResponse(201, $data);
-        }
-    
-
-});
-
-
-
-/*
-* check delivery boy availability (on/off)
-*param:id
-method:post
-*/
-$app->post('/check_delivery_boy_availability', function () use ($app) {
-
-    verifyRequiredParams(array('id'));
-    $id = $app->request->post('id');
-
-
-    $db = new DbOperation();
-    $data = array();
-
-
-    if ($db->check_delivery_boy_availability($id)) {
-
-
-        $data['result'] = true;
-        $data['message'] = "You are available";
-
-
-    } else {
-        $data['result'] = false;
-        $data['message'] = "You are not available";
-    }
-
     echoResponse(200, $data);
 });
-
-
-
-
-/*
- * update password
- * Parameters:old_pass,new_pass,uid
- * Method: post
-*/
-
-$app->post('/update_password', function () use ($app) {
-    verifyRequiredParams(array('old_pass', 'new_pass', 'uid'));
-    $response = array();
-    $old_pass = $app->request->post('old_pass');
-    $new_pass = $app->request->post('new_pass');
-    $id = $app->request->post('uid');
-
-    $db = new DbOperation();
-    $res = $db->update_Password($old_pass, $new_pass, $id);
-
-    if ($res == 0) {
-        $response['result'] = false;
-        $response['status']="valid";
-        $response["error_code"] = 0;
-        $response["message"] = "Password updated successfully";
-        echoResponse(201, $response);
-    } else if ($res == 1) {
-        $response["message"] = "Oops! An error occurred while Updating profile";
-        $response['result'] = true;
-         $response['status']="invalid";
-        $response["error_code"] = 1;
-        echoResponse(200, $response);
-    } else if ($res == 2) {
-        $response["message"] = "Current Password is incorrect.";
-        $response['result'] = true;
-         $response['status']="invalid";
-        $response["error_code"] = 1;
-        echoResponse(200, $response);
-    }
-
-});
-
 
 
 

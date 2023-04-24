@@ -270,11 +270,11 @@ if(isset($_COOKIE["msg"]) )
                         <td><?php echo $i?></td>
                         <td><?php echo $city["city_name"]?></td>
                         <td><?php echo $city["state_name"]?></td>
-                        <?php if($city["status"]=='enable'){	?>
-                          <td style="color:green"><?php echo $city["status"]?></td>
-                        <?php } else if($city["status"]=='disable'){	?>
-                          <td style="color:red"><?php echo $city["status"]?></td>
-                        <?php } ?>
+                    <?php if($city["status"]=='enable'){	?>
+                        <td style="color:green"><?php echo $city["status"]?></td>
+                    <?php } else if($city["status"]=='disable'){	?>
+                        <td style="color:red"><?php echo $city["status"]?></td>
+                    <?php } ?>
                     
                         <td>
                         
@@ -332,20 +332,20 @@ if(isset($_COOKIE["msg"]) )
         }
   function viewdata(id,stateid,cname,status) {
            
-	   	$('#ttId').val(id);
-      $('#state').val(stateid);
+		   	$('#ttId').val(id);
+            $('#state').val(stateid);
 			$('#city_name').val(atob(cname));
 			if(status=="enable")
-	   	{
-			 $('#enable').attr("checked","checked");	
-	   	}
-	   	else if(status=="disable")
-	   	{
-			 $('#disable').attr("checked","checked");	
-	   	}
+		   	{
+				$('#enable').attr("checked","checked");	
+		   	}
+		   	else if(status=="disable")
+		   	{
+				$('#disable').attr("checked","checked");	
+		   	}
 			
 			$('#btnsubmit').attr('hidden',true);
-      $('#btnupdate').attr('hidden',true);
+            $('#btnupdate').attr('hidden',true);
 			$('#btnsubmit').attr('disabled',true);
 			$('#btnupdate').attr('disabled',true);
 

@@ -12,7 +12,7 @@ class DB_Connect {
     // Connecting to database
     public function connect() {
        
-		$con = mysqli_connect("localhost","root","","kapot") or die("Connection Failed...!");
+		$con = mysqli_connect("localhost","root","","kapotmail") or die("Connection Failed...!");
 		
 		if (!$con)
   {
@@ -27,8 +27,7 @@ class DB_Connect {
     }
 	
 	
- 
-    // Closing database connection
+    
     public function insert($query) {
      
 		$res=mysqli_query($this->con1,$query);

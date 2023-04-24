@@ -138,6 +138,19 @@ if(isset($_REQUEST["flg"]) && $_REQUEST["flg"]=="del")
         });
   }
 
+  function getPincode(area){
+    $.ajax({
+          async: true,
+          type: "POST",
+          url: "ajaxdata.php?action=getPincode",
+          data: "area_id="+area,
+          cache: false,
+          success: function(result){
+            $('#pincode').val(result);
+          }
+        });
+  }
+
 </script>
 
 <h4 class="fw-bold py-3 mb-4"><?php echo $cust['name'] ?>'s Address</h4>
@@ -253,14 +266,14 @@ if(isset($_COOKIE["msg"]) )
 
                         <div class="mb-3">
                           <label class="form-label" for="basic-default-company">Area</label>
-                          <select name="area_id" id="area_id" class="form-control" required>
+                          <select name="area_id" id="area_id" class="form-control" onchange="getPincode(this.value)" required>
                             <option value="">Select Area</option>
                           </select>
                         </div>
 
                         <div class="mb-3">
                           <label class="form-label" for="basic-default-company">Pincode</label>
-                          <input type="text" class="form-control" name="pincode" id="pincode" required/>
+                          <input type="text" class="form-control" name="pincode" id="pincode" required readonly />
                         </div>
                         
                     

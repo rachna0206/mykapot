@@ -259,7 +259,6 @@ if(isset($_COOKIE["msg"]) )
                         <th>Coupon</th>
                         <th>Counter</th>
                         <th>Date/Time</th>
-                        <th>Admin I.D.</th>
                         <th>Actions</th>
                       </tr>
                     </thead>
@@ -281,7 +280,6 @@ if(isset($_COOKIE["msg"]) )
                         <td><?php echo $cust["coupon"]?></td>
                         <td><?php echo $cust["counter"]?></td>
                         <td><?php echo $cust["date/time"]?></td>
-                        <td><?php echo $cust["admin_id"]?></td>
                         <td>
                         	<a href="javascript:editdata('<?php echo $cust["sr_no"]?>','<?php echo $cust["admin_id"]?>','<?php echo $cust["customer_id"]?>','<?php echo $cust["coupon_id"]?>','<?php echo $cust["counter"]?>');"><i class="bx bx-edit-alt me-1"></i> </a>
                           	<a href="javascript:deletedata('<?php echo $cust["sr_no"]?>');"><i class="bx bx-trash me-1"></i> </a>

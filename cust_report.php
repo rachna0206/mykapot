@@ -1,6 +1,6 @@
 <?php
 include("header.php");
-error_reporting(E_ALL);
+error_reporting(0);
 
 
 // insert data
@@ -14,7 +14,7 @@ if(isset($_REQUEST['btnsubmit']))
   $contact_str=" and contact like '%".$contact."%'";
   $email_str=" and email like '%".$email."%'";
   
-  $stmt_list = $obj->con1->prepare("SELECT * from customer_reg c1 where ".$name_str.$contact_str.$email_str);
+  $stmt_list = $obj->con1->prepare("SELECT * from customer_reg c1 where ".$name_str.$contact_str.$email_str." order by c1.id desc");
   $stmt_list->execute();
   $result = $stmt_list->get_result();
   
@@ -25,11 +25,11 @@ else if(isset($_REQUEST["typ"]))
   if($_REQUEST['typ']=="today")
   {
     $dt = $_COOKIE['selected_date'];
-    $stmt_list = $obj->con1->prepare("SELECT * from customer_reg c1 where dt like '%".$dt."%' ");
+    $stmt_list = $obj->con1->prepare("SELECT * from customer_reg c1 where dt like '%".$dt."%' "." order by c1.id desc");
   }
   else if($_REQUEST['typ']=="total")
   {
-    $stmt_list = $obj->con1->prepare("SELECT * from customer_reg c1");
+    $stmt_list = $obj->con1->prepare("SELECT * from customer_reg c1 order by c1.id desc");
   }
   $stmt_list->execute();
   $result = $stmt_list->get_result(); 
@@ -78,7 +78,12 @@ else if(isset($_REQUEST["typ"]))
 
 <!-- Basic Bootstrap Table -->
               <div class="card">
-                <h5 class="card-header">Customer Records</h5>
+                <div class="row ms-2 me-3">
+                  <div class="col-md-9"><h5 class="card-header">Customer Records</h5></div>
+                  <div class="col-md-2" style="margin:1%">
+                    <input type="button" class="btn btn-primary" name="btn_excel" value="Export to Excel"  onClick="window.location.href='customer_report_excel.php?name=<?php echo $name?>&contact=<?php echo $contact?>&email=<?php echo $email?>'" id="btn_excel">
+                  </div>                
+                </div>
                
                 <div class="table-responsive text-nowrap">
                   <table class="table" id="table_id">
@@ -107,9 +112,9 @@ else if(isset($_REQUEST["typ"]))
                         <td><?php echo $row["contact"]?></td>
                         <td><?php echo $row["email"]?></td>
                         <td ><a href="javascript:view_cust_data('<?php echo $row["id"]?>')">View</a></td>
-                    <?php 
-                    $i++;
-                  } ?>
+                        <?php 
+                        $i++;
+                      } ?>
                       </tr>
                       <?php
                           

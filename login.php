@@ -32,7 +32,7 @@ $con = mysqli_connect("localhost","root","","pragmanx_english_express") ;
 			$ui = $_REQUEST["utxt"];
 			$pa = $_REQUEST["ptxt"];
 			
-			$qr = $con->prepare("select id,userid,password from admin where userid=? and BINARY password=?");
+			$qr = $con->prepare("select userid,password from admin where userid=? and BINARY password=?");
 			$qr->bind_param("ss",$ui,$pa);
 			$qr->execute();
 			$result = $qr->get_result();
@@ -42,7 +42,6 @@ $con = mysqli_connect("localhost","root","","pragmanx_english_express") ;
 			if($row["uid"]==$ui)
 			{
 				$_SESSION["utype"]=$ui;
-				$_SESSION["uid"]=$row["id"];
 				header("location:home.php");
 			}
 			else

@@ -1,6 +1,10 @@
 <?php
   include("header.php");
 error_reporting(E_ALL);
+
+  $current_time = date('H:i');
+
+
   //customer list
   $stmt_slist = $obj->con1->prepare("select * from customer_reg");
   $stmt_slist->execute();
@@ -23,14 +27,12 @@ error_reporting(E_ALL);
 
 
   // collection adddress
-
   $stmt_address= $obj->con1->prepare("select ca.*,c1.city_name,a1.area_name from customer_address ca, area a1,city c1 where ca.area_id=a1.aid and ca.city_id=c1.city_id");
   $stmt_address->execute();
   $res_address  = $stmt_address->get_result();
   $stmt_address->close();
 
   // collection Time
-
   $stmt_time= $obj->con1->prepare("select * from collection_time where status='enable'");
   $stmt_time->execute();
   $res_coll_time = $stmt_time->get_result();
@@ -67,72 +69,72 @@ error_reporting(E_ALL);
     $ack=$_REQUEST['ack'];
     $priority=$_REQUEST['priority'];
     $coll_address=$_REQUEST['coll_address'];
+    $collection_date=$_REQUEST['collection_dt'];
     $coll_time=$_REQUEST['coll_time'];
     $dispatch_date=$_REQUEST['dispatch_dt'];
     $basic_charge = $_REQUEST['basic_charge'];
     $delivery_charge=$_REQUEST['delivery_charge'];
-    $ack_charges=$_REQUEST['ack_charge'];
+    $ack_charges=isset($_REQUEST['ack_charge'])?$_REQUEST['ack_charge']:0;
     
-    $coupon_id=$_REQUEST['coupon'];
+    $coupon_id=isset($_REQUEST['coupon'])?$_REQUEST['coupon']:0;
     $discount=isset($_REQUEST['discount'])?$_REQUEST['discount']:"0";
-    $total_charges=($basic_charge+$ack_charges+$delivery_charge)-$discount;
+    $total_charges=($basic_charge+$ack_charges+$delivery_charge);
     $total_payment=$_REQUEST["total_amt"];
     $noti_status=1;
     $playstatus=1;
     $noti_type="post";
     $post_status="pending";
+    $payment_status="unpaid";
     try
-    {
+    {      
       
+    	$stmt = $obj->con1->prepare("INSERT INTO `post`( `receiver_name`, `sender_id`, `house_no`, `street_1`, `area`, `city`, `pincode`, `mail_type`, `weight`, `acknowledgement`, `priority`, `collection_address`, `collection_date`, `collection_time`, `dispatch_date`, `basic_charges`, `delivery_charge`, `ack_charges`, `total_charges`, `coupon_id`, `discount`, `total_payment`,`post_status`,`payment_status`) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)");
+    	$stmt->bind_param("sisssssisssssssssssissss",$receiver_name,$sender,$house,$street,$area,$city,$pincode,$mail_type,$weight,$ack,$priority,$coll_address,$collection_date,$coll_time,$dispatch_date,$basic_charge,$delivery_charge,$ack_charges,$total_charges,$coupon_id,$discount,$total_payment,$post_status,$payment_status);
+    	$Resp=$stmt->execute();
+      $stmt->close();
+      $insert_id = mysqli_insert_id($obj->con1);
+
+       //assign post to dboy
+
+      //get zoneid from customer address
+      $stmt_zone = $obj->con1->prepare("SELECT a1.aid,a1.zone,a1.pincode FROM customer_address c1 ,area a1 where c1.area_id=a1.aid and c1.ca_id=?");
+      $stmt_zone->bind_param("i",$coll_address);
+      $stmt_zone->execute();
+      $Resp_zone=$stmt_zone->get_result()->fetch_assoc();
+      $stmt_zone->close();
+
+      // get dboy from zone
       
-  	$stmt = $obj->con1->prepare("INSERT INTO `post`( `receiver_name`, `sender_id`, `house_no`, `street_1`, `area`, `city`, `pincode`, `mail_type`, `weight`, `acknowledgement`, `priority`, `collection_address`, `collection_time`, `dispatch_date`, `basic_charges`, `delivery_charge`, `ack_charges`, `total_charges`, `coupon_id`, `discount`, `total_payment`,`post_status`) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)");
-  	$stmt->bind_param("sisssssissssssssssisss",$receiver_name,$sender,$house,$street,$area,$city,$pincode,$mail_type,$weight,$ack,$priority,$coll_address,$coll_time,$dispatch_date,$basic_charge,$delivery_charge,$ack_charges,$total_charges,$coupon_id,$discount,$total_payment,$post_status);
-  	$Resp=$stmt->execute();
-     $stmt->close();
-     $insert_id = mysqli_insert_id($obj->con1);
+      $stmt_dboy = $obj->con1->prepare("select * from delivery_boy where zone_id=?");
+      $stmt_dboy->bind_param("i",$Resp_zone["zone"]);
+      $stmt_dboy->execute();
+      $Resp_dboy=$stmt_dboy->get_result();
+      $stmt_dboy->close();
+      while($dboy=mysqli_fetch_array($Resp_dboy))
+      {
+        // assign post to dboy
+        $distance="";
+        $job_status="pending";
+        $stmt_post_assign = $obj->con1->prepare("INSERT INTO `job_assign`( `delivery_boy_id`, `post_id`, `job_status`, `distance`) VALUES (?,?,?,?)");
+        $stmt_post_assign->bind_param("iiss",$dboy["db_id"],$insert_id,$job_status,$distance);
+        $Resp_post=$stmt_post_assign->execute();
+        $stmt_post_assign->close();
+      }
 
-     //assign post to dboy
-
-     //get zoneid from customer address
-    $stmt_zone = $obj->con1->prepare("SELECT a1.aid,a1.zone,a1.pincode FROM customer_address c1 ,area a1 where c1.area_id=a1.aid and c1.ca_id=?");
-    $stmt_zone->bind_param("i",$coll_address);
-    $stmt_zone->execute();
-    $Resp_zone=$stmt_zone->get_result()->fetch_assoc();
-    $stmt_zone->close();
-
-    // get dboy from zone
-    
-    $stmt_dboy = $obj->con1->prepare("select * from delivery_boy where zone_id=?");
-    $stmt_dboy->bind_param("i",$Resp_zone["zone"]);
-    $stmt_dboy->execute();
-    $Resp_dboy=$stmt_dboy->get_result();
-    $stmt_dboy->close();
-    while($dboy=mysqli_fetch_array($Resp_dboy))
-    {
-      // assign post to dboy
-      $distance="";
-      $job_status="pending";
-      $stmt_post_assign = $obj->con1->prepare("INSERT INTO `job_assign`( `delivery_boy_id`, `post_id`, `job_status`, `distance`) VALUES (?,?,?,?)");
-      $stmt_post_assign->bind_param("iiss",$dboy["db_id"],$insert_id,$job_status,$distance);
-      $Resp_post=$stmt_post_assign->execute();
-      $stmt_post_assign->close();
-
-    }
-
-     if($coupon_id!="")
-     {
-      //decrease coustomer coupon count
-      $stmt_coupon = $obj->con1->prepare("update coupon_counter set counter=counter-1 where customer_id=? and coupon_id=?");
-      $stmt_coupon->bind_param("ii",$sender,$coupon_id);
-      $Resp_coupon=$stmt_coupon->execute();
-      $stmt_coupon->close();
-     }
-     
-    //insert into notification
-    $stmt_noti = $obj->con1->prepare("INSERT INTO `notification`( `noti_type`, `noti_type_id`, `status`, `playstatus`) VALUES (?,?,?,?)");
-    $stmt_noti->bind_param("siii",$noti_type,$insert_id,$noti_status,$playstatus);
-    $Resp_noti=$stmt_noti->execute();
-    $stmt_noti->close();
+       if($coupon_id!="")
+       {
+        //decrease coustomer coupon count
+        $stmt_coupon = $obj->con1->prepare("update coupon_counter set counter=counter-1 where customer_id=? and coupon_id=?");
+        $stmt_coupon->bind_param("ii",$sender,$coupon_id);
+        $Resp_coupon=$stmt_coupon->execute();
+        $stmt_coupon->close();
+       }
+       
+      //insert into notification
+      $stmt_noti = $obj->con1->prepare("INSERT INTO `notification`( `noti_type`, `noti_type_id`, `status`, `playstatus`) VALUES (?,?,?,?)");
+      $stmt_noti->bind_param("siii",$noti_type,$insert_id,$noti_status,$playstatus);
+      $Resp_noti=$stmt_noti->execute();
+      $stmt_noti->close();
       if(!$Resp)
       {
         throw new Exception("Problem in adding! ". strtok($obj->con1-> error,  '('));
@@ -152,9 +154,74 @@ error_reporting(E_ALL);
     else
     {
   	  setcookie("msg", "fail",time()+3600,"/");
-        header("location:post.php");
+      header("location:post.php");
     }
   }
+
+// update data 
+if(isset($_REQUEST['btn_modal_update']))
+{
+  
+  $order_status = $_REQUEST['order_status'];
+  $delivery_boy = $_REQUEST['delivery_boy'];
+  $post_id = $_REQUEST['post_id'];
+  $job_status_accept = "accept";
+  $job_status_autoreject = "auto_reject";
+  $job_status_pending = "pending";
+  $job_status_rejected_admin = "rejected_admin";
+  $job_status_canceled_user = "canceled_user";
+  
+  try
+  {
+    $stmt = $obj->con1->prepare("update post set post_status=? where id=?");
+    $stmt->bind_param("si", $order_status,$post_id);
+    $Resp=$stmt->execute();
+
+
+    if($order_status=='accept'){
+      $stmt_dboy = $obj->con1->prepare("update job_assign set job_status=? where delivery_boy_id=? and post_id=?");
+      $stmt_dboy->bind_param("sii", $job_status_accept,$delivery_boy,$post_id);
+      $Resp=$stmt_dboy->execute();
+
+      $stmt_dboy = $obj->con1->prepare("update job_assign set job_status=? where delivery_boy_id!=? and post_id=? and (job_status=? || job_status=?)");
+      $stmt_dboy->bind_param("ssiss", $job_status_autoreject,$delivery_boy,$post_id,$job_status_accept,$job_status_pending);
+      $Resp=$stmt_dboy->execute();  
+    }
+    else if($order_status=='rejected_admin'){
+      $stmt_dboy = $obj->con1->prepare("update job_assign set job_status=? where post_id=? and job_status!='reject'");
+      $stmt_dboy->bind_param("si", $job_status_rejected_admin,$post_id);
+      $Resp=$stmt_dboy->execute();
+    }
+    else if($order_status=='canceled_user'){
+      $stmt_dboy = $obj->con1->prepare("update job_assign set job_status=? where post_id=? and job_status!='reject'");
+      $stmt_dboy->bind_param("si", $job_status_canceled_user,$post_id);
+      $Resp=$stmt_dboy->execute();
+    }
+    
+
+    if(!$Resp)
+    {
+      throw new Exception("Problem in updating! ". strtok($obj->con1-> error,  '('));
+    }
+    $stmt->close();
+  } 
+  catch(\Exception  $e) {
+    setcookie("sql_error", urlencode($e->getMessage()),time()+3600,"/");
+  }
+
+  if($Resp)
+  {
+    setcookie("msg", "update",time()+3600,"/");
+      header("location:post.php");
+  }
+  else
+  {
+    setcookie("msg", "fail",time()+3600,"/");
+      header("location:post.php");
+  }
+}
+
+
 
   // delete data
 if(isset($_REQUEST["flg"]) && $_REQUEST["flg"]=="del")
@@ -323,7 +390,7 @@ if(isset($_REQUEST["flg"]) && $_REQUEST["flg"]=="del")
                           </div>
                           <div class="col mb-3">
                             <label class="form-label" for="basic-default-fullname">Mail Type</label>
-                            <select name="mail_type" id="mail_type" class="form-control" required>
+                            <select name="mail_type" id="mail_type" class="form-control" onchange="check_forMailType(weight.value)" required>
                               <option value="">Select Mail Type</option>
                                     <?php    
                                         while($mail_type=mysqli_fetch_array($res_mail)){
@@ -339,7 +406,7 @@ if(isset($_REQUEST["flg"]) && $_REQUEST["flg"]=="del")
                         <div class="row g-2">
                           <div class="col mb-3">
                             <label class="form-label d-block" for="basic-default-fullname">Approx Weight(in grams)</label>
-                            <input type="number" min="1" class="form-control" name="weight" id="weight" required onblur="get_amount(this.value)"/>
+                            <input type="number" min="1" class="form-control" name="weight" id="weight" required onblur="get_amount(this.value)" step="0.01" />
                             <div id="weight_alert" class="text-danger"></div>
                           </div>
                           
@@ -375,44 +442,51 @@ if(isset($_REQUEST["flg"]) && $_REQUEST["flg"]=="del")
                             <label class="form-label" for="basic-default-fullname">Collect From</label>
                             <select name="coll_address" id="coll_address" class="form-control" required>
                               <option value="">Select Collection Address</option>
-                                    <?php    
-                                        while($address=mysqli_fetch_array($res_address)){
-                                    ?>
-                                        <option value="<?php echo $address["ca_id"] ?>"><?php echo $address["address_label"]."-".$address["house_no"].",".$address["street"].",".$address["area_name"].",".$address["city_name"] ?></option>
-                                    <?php
-                            }
-                          ?>
+                                    
                                 </select>
                                           
                           </div>
                         </div>  
                         <div class="row g-2">
-                          
-                          
+                          <div class="col mb-3">
+                            <label class="form-label d-block" for="basic-default-fullname">Collection Date</label>
+                            <input type="date" class="form-control" name="collection_dt" id="collection_dt" onchange="getCollectionTime(this.value)" <?php if($current_time<='17:00'){  ?>
+                                min="<?php echo date('Y-m-d'); ?>";
+                              <?php } else{ 
+                                  $set_date = new DateTime(date('Y-m-d'));
+                                  $set_date->modify('+1 day');
+                                  //$d_date->format('Y-m-d'); ?>
+                                  min="<?php echo $set_date->format('Y-m-d'); ?>";
+                              <?php } ?> required />
+                          </div>
                           <div class="col mb-3">
                             <label class="form-label" for="basic-default-fullname">Collection Time</label>
                             <select name="coll_time" id="coll_time" class="form-control" required>
                               <option value="">Select Collection Time</option>
-                                    <?php    
-                                        while($coll_time=mysqli_fetch_array($res_coll_time)){
-                                    ?>
-                                        <option value="<?php echo $coll_time["id"] ?>"><?php echo $coll_time["start_time"]."-".$coll_time["end_time"]?></option>
-                                    <?php
+                          <?php    
+                              while($coll_time=mysqli_fetch_array($res_coll_time)){
+                          ?>
+                              <option value="<?php echo $coll_time["id"] ?>"><?php echo $coll_time["start_time"]."-".$coll_time["end_time"]?></option>
+                          <?php
                             }
                           ?>
                             </select>                                          
                           </div>
-                          <div class="col mb-3">
-
-                             <label class="form-label d-block" for="basic-default-fullname">Dispatch Date</label>
-                            <input type="date" class="form-control" name="dispatch_dt" id="dispatch_dt" required />
-                          </div>
                         </div>
+
                         <div class="row g-2">
+                          <div class="col mb-3">
+                            <label class="form-label d-block" for="basic-default-fullname">Dispatch Date</label>
+                            <input type="date" class="form-control" name="dispatch_dt" id="dispatch_dt" required readonly />
+                          </div>
                           <div class="col mb-3">
                             <label class="form-label d-block" for="basic-default-fullname">Basic Charges(Rs.)</label>
                             <input type="text" class="form-control" name="basic_charge" id="basic_charge" readonly />
                           </div>
+                        </div>
+
+                        <div class="row g-2">
+                          
                           <div class="col mb-3">
                             <label class="form-label d-block" for="basic-default-fullname">Acknowledgement Charges(Rs.)</label>
                             <input type="text" class="form-control" name="ack_charge" id="ack_charge" readonly value="2.00" />
@@ -421,20 +495,24 @@ if(isset($_REQUEST["flg"]) && $_REQUEST["flg"]=="del")
                             <label class="form-label d-block" for="basic-default-fullname">Delivery Charges(Rs.)</label>
                             <input type="text" class="form-control" name="delivery_charge" id="delivery_charge" readonly value="<?php echo $delivery_charge["minimum_delivery_charge"] ?>" />
                           </div>
+                          <div class="col mb-3">
+                            <label class="form-label d-block" for="basic-default-fullname">Total Charges(Rs.)</label>
+                            <input type="text" class="form-control" name="total_charge" id="total_charge" readonly="" value="">
+                          </div>
                         </div>
                         <div class="row g-2">
                           
                           <div class="col mb-3">
                             <label class="form-label d-block" for="basic-default-fullname">Apply Coupon</label>
                             <select name="coupon" id="coupon" class="form-control"  onchange="get_coupon_disc(this.value)">
-                              <option value="">Select Coupon</option>
+                              <option value="0">Select Coupon</option>
                             </select>  
                             <div id="coupon_alert" class="text-danger"></div>
                           </div>
                           
                           <div class="col mb-3">
                             <label class="form-label d-block" for="basic-default-fullname">Discount(Rs.)</label>
-                            <input type="text" class="form-control" name="discount" id="discount" readonly  />
+                            <input type="text" class="form-control" name="discount" id="discount" readonly   />
                           </div>
                           <div class="col mb-3">
                             <label class="form-label d-block" for="basic-default-fullname">Total Payable(Rs.)</label>
@@ -467,6 +545,7 @@ if(isset($_REQUEST["flg"]) && $_REQUEST["flg"]=="del")
                       <thead>
                         <tr>
                           <th>Srno</th>
+                          <th>Post Id</th>
                           <th>Receiver Name</th>
                           <th>Sender</th>
                           <th>Area</th> 
@@ -490,20 +569,21 @@ if(isset($_REQUEST["flg"]) && $_REQUEST["flg"]=="del")
 
                         <tr>
                           <td><?php echo $i?></td>
+                          <td><?php echo $post["id"]?></td>
                           <td><?php echo $post["receiver_name"]?></td>
                           <td><?php echo $post["cust_name"]?></td>
                           <td><?php echo $post["area"]?></td>
                           <td><?php echo $post["start_time"]."-".$post["end_time"]?></td>
-                          <td><?php echo $post["dispatch_date"]?></td>
+                          <td><?php echo date('d-m-Y', strtotime($post["dispatch_date"]))?></td>
                           <td><?php echo $post["post_status"]?></td>
 
                           <td>
                           
-                          	<!-- <a href="javascript:editdata('<?php echo $post["id"]?>');"><i class="bx bx-edit-alt me-1"></i> </a> -->
+                          	<a  href="javascript:editdata('<?php echo $post["id"]?>');"><i class="bx bx-edit me-1"></i> </a>
                           
   							           <a  href="javascript:deletedata('<?php echo $post["id"]?>');"><i class="bx bx-trash me-1"></i> </a>
                           
-                          	<!-- <a href="javascript:viewdata('<?php echo $post["id"]?>');">View</a> -->
+                          	 <a href="javascript:view_post_data('<?php echo $post["id"]?>');">View</a> 
                           
                           </td>
                     
@@ -520,6 +600,27 @@ if(isset($_REQUEST["flg"]) && $_REQUEST["flg"]=="del")
                 </div>
                 <!--/ Basic Bootstrap Table -->
 
+<!-- Modal -->
+<div class="modal fade" id="modalCenter" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered modal-lg" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="modalCenterTitle">Post Update Page</h5>
+        <button
+          type="button"
+          class="btn-close"
+          data-bs-dismiss="modal"
+          aria-label="Close"
+        ></button>
+      </div>
+      <div id="post_modal">
+      
+    </div>
+    </div>
+  </div>
+</div>
+
+<!-- /modal-->
 
              <!-- / grid -->
 
@@ -530,6 +631,13 @@ if(isset($_REQUEST["flg"]) && $_REQUEST["flg"]=="del")
     {
       createCookie("post_id",pid,1);
       window.open('customer_report_detail.php', '_blank');
+    }
+
+    function check_forMailType(weight){
+      if(weight!=""){
+        get_amount(weight);
+      }
+      
     }
 
     function get_address(sender){
@@ -549,6 +657,7 @@ if(isset($_REQUEST["flg"]) && $_REQUEST["flg"]=="del")
               var coupon_data='<option value="">Select Coupon</option>';
               $('#coupon').html('');
               $('#coupon').append(coupon_data);
+              $('#discount').val('');
             } else{
               $('#coupon').html('');
               $('#coupon').append(data[1]);
@@ -574,6 +683,7 @@ if(isset($_REQUEST["flg"]) && $_REQUEST["flg"]=="del")
             var total_amt=parseFloat(result)+parseFloat(ack_charge)+parseFloat(del_charge);
             $('#basic_charge').html('');
             $('#basic_charge').val(result);
+             $('#total_charge').val(total_amt);
             $('#total_amt').val(total_amt);
             $('#weight_alert').html('');
             if(result==0){
@@ -591,15 +701,15 @@ if(isset($_REQUEST["flg"]) && $_REQUEST["flg"]=="del")
       if( $('#ack_yes').is(':checked') ){
           $('#ack_charge').val("2.00");
           
-          var total_amt=parseInt(basic_charge)+parseInt(2)+parseInt(del_charge);
+          var total_charge=parseFloat(basic_charge)+parseFloat(2)+parseFloat(del_charge);
           
       }
       else{
           $('#ack_charge').val('0.00');
-          var total_amt=parseInt(basic_charge)+parseInt(del_charge);
+          var total_charge=parseFloat(basic_charge)+parseFloat(del_charge);
           
       }
-      $('#total_amt').val(total_amt);
+      $('#total_charge').val(total_charge);
       get_coupon_disc(coupon);
     }
     function get_coupon_disc(val)
@@ -608,34 +718,36 @@ if(isset($_REQUEST["flg"]) && $_REQUEST["flg"]=="del")
       var basic_charge=$('#basic_charge').val();
       var ack_charge=$('#ack_charge').val();
       var del_charge=$('#delivery_charge').val();
-      var total_del_charge=parseInt(ack_charge)+parseInt(del_charge);
-      var main_total=parseInt(basic_charge)+parseInt(ack_charge)+parseInt(del_charge);
+      var total_del_charge=parseFloat(ack_charge)+parseFloat(del_charge);
+    //  var main_total=parseFloat(basic_charge)+parseFloat(ack_charge)+parseFloat(del_charge);
+    var total_charge=$('#total_charge').val();
       if(val!="")
       {
 
-      var total_amt=$('#total_amt').val();
+     // var total_amt=$('#total_amt').val();
       $.ajax({
           async: true,
           type: "POST",
           url: "ajaxdata.php?action=get_coupon_disc",
-          data: "coupon_id="+val+"&total_amt="+total_amt+"&sender="+sender+"&total_del_charge="+total_del_charge,
+          data: "coupon_id="+val+"&total_charge="+total_charge+"&sender="+sender+"&del_charge="+del_charge,//"&total_del_charge="+total_del_charge,
           cache: false,
           success: function(result){
            // var total_amt=parseInt(result)+parseInt(ack_charge)+parseInt(del_charge);
             console.log(result);
             
             if (result == 1) {
-                  $("#coupon").val('');
+                  $("#coupon").val('0');
                   $('#coupon_alert').html('Invalid Coupon Code');
-                  $('#total_amt').val(main_total);
-
+                  $('#total_amt').val(total_charge);
+                  $('#discount').val('0.00');
               } else if (result == 2) {
-                  $("#coupon").val('');
+                  $("#coupon").val('0');
                   $('#coupon_alert').html('Amount is too small');
-                  $('#total_amt').val(main_total);
+                  $('#total_amt').val(total_charge);
+                  $('#discount').val('0.00');
               } else {
                   var data = result.split("@@@@@");
-                  var tamount = parseFloat(total_amt) - parseFloat(data[1]);
+                  var tamount = parseFloat(total_charge) - parseFloat(data[1]);
                   console.log("tamount=" + parseFloat((tamount * 100) / 100).toFixed(2));
                   $('#coupon_alert').html('');
                   
@@ -646,43 +758,78 @@ if(isset($_REQUEST["flg"]) && $_REQUEST["flg"]=="del")
             }
            
         });
+
       }
       else
       {
+        $('#discount').val('0.00');
         var ack_charge=$('#ack_charge').val();
         var del_charge=$('#delivery_charge').val();
         var basic_charge=$('#basic_charge').val();
-        var total_amt=parseInt(basic_charge)+parseInt(ack_charge)+parseInt(del_charge);
+        var total_amt=parseFloat(basic_charge)+parseFloat(ack_charge)+parseFloat(del_charge);
         $('#total_amt').val(parseFloat(total_amt).toFixed(2));
       }
     }
-    function deletedata(id) {
 
-        if(confirm("Are you sure to DELETE data?")) {
-            var loc = "post.php?flg=del&n_id=" + id;
-            window.location = loc;
+    function getCollectionTime(collection_date){
+      $.ajax({
+          async: true,
+          type: "POST",
+          url: "ajaxdata.php?action=getCollectionTime",
+          data: "collection_date="+collection_date,
+          cache: false,
+          success: function(result){
+            var data = result.split("@@@@@");
+            $('#coll_time').html('');
+            $('#coll_time').append(data[0]);
+            $('#dispatch_dt').val(data[1]);
+          }
+        });
+    }
+
+    function deletedata(id) {
+      if(confirm("Are you sure to DELETE data?")) {
+          var loc = "post.php?flg=del&n_id=" + id;
+          window.location = loc;
+      }
+    }
+
+    function editdata(post_id)
+    {
+      $('#modalCenter').modal('toggle');
+      $.ajax({
+        async: true,
+        type: "POST",
+        url: "ajaxdata.php?action=post_update_modal",
+        data: "post_id="+post_id,
+        cache: false,
+        success: function(result){
+          //alert(result);
+          $('#post_modal').html('');
+          $('#post_modal').html(result);
+     
         }
+      });
+      
     }
     
-    function viewdata(id,stateid,cname,status) {
-             
-  		   	$('#ttId').val(id);
-              $('#state').val(stateid);
-  			$('#post_name').val(atob(cname));
-  			if(status=="enable")
-  		   	{
-  				$('#enable').attr("checked","checked");	
-  		   	}
-  		   	else if(status=="disable")
-  		   	{
-  				$('#disable').attr("checked","checked");	
-  		   	}
-  			
-  			$('#btnsubmit').attr('hidden',true);
-              $('#btnupdate').attr('hidden',true);
-  			$('#btnsubmit').attr('disabled',true);
-
-          }
+    function viewdata(id,stateid,cname,status) {             
+		  $('#ttId').val(id);
+      $('#state').val(stateid);
+			$('#post_name').val(atob(cname));
+			if(status=="enable")
+		  {
+				$('#enable').attr("checked","checked");	
+		  }
+		  else if(status=="disable")
+		  {
+				$('#disable').attr("checked","checked");	
+		  }
+			
+			$('#btnsubmit').attr('hidden',true);
+      $('#btnupdate').attr('hidden',true);
+			$('#btnsubmit').attr('disabled',true);
+    }
   </script>
   <?php 
   include("footer.php");

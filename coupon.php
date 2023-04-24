@@ -300,7 +300,7 @@ if(isset($_COOKIE["msg"]) )
                         <td><?php echo $i?></td>
                         <td><?php echo $coupon["name"]?></td>
                         <td><?php echo $coupon["couponcode"]?></td>
-                        <td><?php echo $coupon["discount"]?></td>
+                        <td><?php echo $coupon["discount"] ?></td>
                         <td><?php echo $coupon["s_dt"]?></td>
                         <td><?php echo $coupon["e_dt"]?></td>
                     <?php if($coupon["status"]=='enable'){	?>

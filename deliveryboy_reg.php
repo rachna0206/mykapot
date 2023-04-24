@@ -470,7 +470,7 @@ if(isset($_COOKIE["msg"]) )
                         <th>Name</th>
                         <th>E-mail</th>
                         <th>Contact</th>
-                        <th>City</th>
+                        <th>Zone</th>
                         <th>Pincode</th>
                        
                         <th>Status</th>
@@ -479,7 +479,7 @@ if(isset($_COOKIE["msg"]) )
                     </thead>
                     <tbody class="table-border-bottom-0">
                       <?php 
-                        $stmt_list = $obj->con1->prepare("select  db.*,c1.city_name from delivery_boy db,city c1 where db.city=c1.city_id order by db_id desc");
+                        $stmt_list = $obj->con1->prepare("select  db.*,c1.city_name,z1.zone_name from delivery_boy db,city c1,zone z1 where db.city=c1.city_id and db.zone_id=z1.zid order by db_id desc");
                         $stmt_list->execute();
                         $result = $stmt_list->get_result();
                         
@@ -494,7 +494,7 @@ if(isset($_COOKIE["msg"]) )
                         <td><?php echo $Delivery["name"]?></td>
                         <td><?php echo $Delivery["email"]?></td>
                         <td><?php echo $Delivery["contact"]?></td>
-                        <td><?php echo $Delivery["city_name"]?></td>
+                        <td><?php echo $Delivery["zone_name"]?></td>
                         <td><?php echo $Delivery["pincode"]?></td>
                         <?php if($Delivery["status"]=='enable'){  ?>
                         <td style="color:green"><?php echo $Delivery["status"]?></td>
@@ -644,7 +644,7 @@ if(isset($_COOKIE["msg"]) )
       $('#btnupdate').removeAttr('hidden');
 		  $('#btnsubmit').attr('disabled',true);
     }
-  function viewdata(id,name,email,contact,address,city,pincode,id_type,id_proof,zone,status) {     
+  function viewdata(id,name,email,contact,address,city,pincode,id_type,id_proof,zone,status,profile_pic) {     
 	   	$('#ttId').val(id);
       $('#name').val(atob(name));
       $('#email').val(atob(email));
@@ -655,9 +655,13 @@ if(isset($_COOKIE["msg"]) )
       $('#id_type').val(id_type);
       //$('#id_proof').val(atob(id_proof));
       $('#hid_proof').val(atob(id_proof));
+      $('#hpro_pic').val(atob(profile_pic));
       $('#PreviewImage').show();
       $('#PreviewImage').attr('src','deliveryboy_id/'+atob(id_proof));   
       $('#id_proof').removeAttr('required');
+      $('#PreviewProfile').show();
+      $('#PreviewProfile').attr('src','deliveryboy_id/'+atob(profile_pic));   
+      $('#pro_pic').removeAttr('required');
       $('#zone').val(zone);
       $('#pass_div').hide();
       if(status=="enable")

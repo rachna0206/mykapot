@@ -240,7 +240,7 @@ if(isset($_COOKIE["msg"]) )
                     </thead>
                     <tbody class="table-border-bottom-0">
                       <?php 
-                        $stmt_list = $obj->con1->prepare("select f1.*,c1.name from customer_feedback f1, customer_reg c1 where f1.customer_id=c1.id");
+                        $stmt_list = $obj->con1->prepare("select f1.*,c1.name from customer_feedback f1, customer_reg c1 where f1.customer_id=c1.id order by feedback_id desc");
                         $stmt_list->execute();
                         $result = $stmt_list->get_result();
                         
